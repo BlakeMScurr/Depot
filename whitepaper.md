@@ -60,11 +60,23 @@ Let `d` be the gas cost the server must pay to dequeue a message, and let `e` be
 
 On the other hand, a low `d/e` ratio reduces the server's incentive to respond off chain. I `d/e` were 0.1, the server could single censor a user, and only incur a 10k gas cost for every 100k gas the user spent enforcing their right to the service.
 
-Therefore the `d/e` ratio creates a tension between liveliness and robustness. It is not clear a priori what the ratio should be, therefore there will be mechanisms to update it as outlined in the [updating](##updating) section.
+Therefore the `d/e` ratio creates a tension between liveliness and robustness, each of which can be exploited by enemies of neutral infrastructure. We could attempt to decude a priori which attack is more likely and adjust the ratio accordingly. In the long run (30+ years), it's safe to assume that the founding principles of a company running a stewarded system will be diluted, and it will resemble any other corporation of similar size. Therefore we must guard equally against outside attacks, as against attacks by the server against its users, and the `d/e/` ratio should be approximately 1.
 
-There are two clear groups who might do a `d/e` attack; competitors, or ideological enemies. Competitors' attacks can hopefully be fended off with good business/marketing acumen, it is generally not in a business's interest to be so aggressive anyway. Ideological enemies who are opposed to neutral social media are probably even more opposed to cryptocurrency in general, and since they have burn cryptocurrency and pay miners/validators to do a `d/e` attack, they end up distributing resources to their enemies.
+We could provide an updating mechanism to alter the `d/e` ratio according to the needs of the time. However, since a steward could lower the `d/e` ratio to enable censorship, the updating mechanism would have to be finely balanced among participants. Such a mechanism would significantly increase the protocol's attack surface for little gain.
 
 ## Multichain
+
+The server can increase minimum throughput by duplicating the request queue contract across layer 1s. The challenge in going multichain is that the client must demonstrate proof-of-burn/proof-of-ownership on chain 2, and the server must still have a liveliness guarantee on chain 2 that can be burned. As long as the request queue contract on chain 2 produces receipts that can be used in honesty arbitration on chain 1, the server needn't have an honesty guarantee on chain 2. This means that the server can utilise low trust chains by staking small guarantees, and achieve low certainty liveliness while retaining high certainty honesty.
+
+### Proof of Ownership
+
+A simple solution to cross chain proof-of-ownership is to have a new token for each chain, and have the liveliness queue on chainX only accept proof of ownership for tokens on chainX. The tokens can then be pegged crosschain, ensuring a consistent price.
+
+<!-- TODO: research - I have literally no idea how this works -->
+
+Alternatively, if smart contracts can read the state of other chains via oracles etc, proof of ownership could be enforced on the ledger of record, and request queue on scale ledgers can simply read it there. This means that subscription is always guaranteed by the ledger of record, and scale ledgers only require minimal trust.
+
+<!-- TODO: make nomenclature like "chain 2" "chainX" "ledger of record", and "scale ledgers" consistent -->
 
 # Robustness
 
@@ -73,5 +85,3 @@ Decentralisation creates robustness as well as neutrality. For example, the inte
 The point of stewarded systems is not to challenge the worlds most entrenched power structures (governments), but to reverse the accrual of power in the hands of technology companies, making them stewards over critical infrastructure, not lords. Therefore stewards should take greater pains than the average crypto developer to ensure that their company is above board in their jurisdiction.
 
 ## Opsec
-
-# Updating
