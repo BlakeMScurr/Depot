@@ -1,5 +1,7 @@
 # Centralised and Neutral
 
+<!-- TODO: find Swiss Crossbow analogy rather than steward -->
+
 Existing social media platforms are either centralised and trusted, or decentralised and credibly neutral. Trusted servers can withhold posts and messages from their users, and decentralised protocols face architecture, logistical, alignment, and credibility complexities.
 
 Stewarded systems, by contrast, are centralised yet credibly neutral. They have the architecture of an ordinary centralisd server, but are held accountable by an on chain arbiter which keeps it lively and honest.
@@ -7,6 +9,8 @@ Stewarded systems, by contrast, are centralised yet credibly neutral. They have 
 Even if they are a monopolist, the owner of the server is not a monarch, and cannot impose arbitrary rules on their users. Rather, they are a steward over public infrastructure.
 
 This paper describes the a simple stewarded chat server built on Ethereum, but the principles can be extended to social media and SaaS in general built on any blockchain.
+
+<!-- TODO: rewrite as minimal social medium, not chat server -->
 
 # Problems with Existing Systems
 
@@ -50,6 +54,8 @@ To access the server in proof-of-lockup, a user just buys some of the token and 
 
 To access the server in proof-of-burn, a user must buy some of the token and burn it in proportion to the time they want access to the server. This is appropriate for a steady state service, as the server continues to be paid via deflation, whereas if proof-of-lockup continued indefinitely users would no longer have to buy the token and the server wouldn't be rewarded. It is also better than microtransactions, as proof of burn rewards early investors and is technically simpler.
 
+<!-- TODO: discuss sending money back to the server as a non-micropayment. In particular, this will have  -->
+
 # Throughput
 
 The minimum possible throughput is defined by the throughput of the onchain request queue. In order to be credibly lively, enqueuing must be as cheap as possible.
@@ -63,6 +69,8 @@ On the other hand, a low `d/e` ratio reduces the server's incentive to respond o
 Therefore the `d/e` ratio creates a tension between liveliness and robustness, each of which can be exploited by enemies of neutral infrastructure. We could attempt to decude a priori which attack is more likely and adjust the ratio accordingly. In the long run (30+ years), it's safe to assume that the founding principles of a company running a stewarded system will be diluted, and it will resemble any other corporation of similar size. Therefore we must guard equally against outside attacks, as against attacks by the server against its users, and the `d/e/` ratio should be approximately 1.
 
 We could provide an updating mechanism to alter the `d/e` ratio according to the needs of the time. However, since a steward could lower the `d/e` ratio to enable censorship, the updating mechanism would have to be finely balanced among participants. Such a mechanism would significantly increase the protocol's attack surface for little gain.
+
+### Gas Splitting
 
 ## Multichain
 
@@ -78,6 +86,8 @@ Alternatively, if smart contracts can read the state of other chains via oracles
 
 <!-- TODO: make nomenclature like "chain 2" "chainX" "ledger of record", and "scale ledgers" consistent -->
 
+## Rate Limiting
+
 # Robustness
 
 Decentralisation creates robustness as well as neutrality. For example, the internet was designed to work if the US were nuked, and Bitcoin was designed to work even if it were illegal everywhere. Stewarded systems, by contrast, are not inherently robust. The central server and be shut off by a hosting company, the devops team can be personally targetted etc. A stewarded system therefore does not inherit all the desirable properties of its consensus layer - it is not unstoppable, it is not uncensorable.
@@ -85,3 +95,16 @@ Decentralisation creates robustness as well as neutrality. For example, the inte
 The point of stewarded systems is not to challenge the worlds most entrenched power structures (governments), but to reverse the accrual of power in the hands of technology companies, making them stewards over critical infrastructure, not lords. Therefore stewards should take greater pains than the average crypto developer to ensure that their company is above board in their jurisdiction.
 
 ## Opsec
+
+## Investor/Company Relations
+
+<!-- TODO: discuss how this is not strictly an LLC in which token investors own part of the company, but rather there is a company who owns the tokens, which are its main representation. Transfer proofs benefit the LLC, whereas burn benefits token holders. -->
+
+## Forks
+
+Decentralised systems eventually reach dynamic equilibrium. They can handle stressors like certain nodes being taken out, but from a bird's eye the system remains fairly constant. Centralised systems are inherently more fragile, if the central storage dies it's game over. 
+
+<!-- TODO: outline a forced full dump mechanism that would allow hostile data takeovers -->
+<!-- TODO: consider possible decentralisation attempts -->
+
+# Pricing
