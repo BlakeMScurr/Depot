@@ -19,10 +19,12 @@ contract PostQueue {
     Request[] requests;
     uint256 index;
     address serverEthAddress;
+    uint256 leeway;
 
-    constructor(address _serverEthAddress) {
+    constructor(address _serverEthAddress, uint256 _leeway) {
         serverEthAddress = _serverEthAddress;
         index = 0;
+
     }
 
     function enqueue(string memory message) public {
@@ -34,6 +36,10 @@ contract PostQueue {
         require(hash.recover(signature) == serverEthAddress, "Request receipts must be signed by the server");
         emit Receipt(requests[index].message, requests[index].address, requests[index].blockNumber, signature);
         index++;
+    }
+
+    function late() public view returns (bool){
+        return requests[index].blockNumber + leeway < block.number
     }
 
 }
