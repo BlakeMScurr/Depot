@@ -38,6 +38,8 @@ Liveliness is enforced with a ForceMove queue. It is in principle limited by the
 
 In the normal course of events the client creates an API request, signs it, and sends it directly to the server, expecting to be served. If the server fails to respond, the client can go to the blockchain and put the request into a queue. The server then has a certain amount of time to respond on chain, if it fails it incurs a substantial loss on its deposit/guarantee, some of which is gifted to the client as incentive.
 
+<!-- TODO: how short can the wait before slash be, to ensure that the transaction gets into the block. What MEV tricks can be used against me? -->
+
 ## Honesty
 
 In a simple chat server, there are only two API endpoints, `sendMessage` and `checkMessages`. To respond honestly to `sendMessage` the server must recieve and store the message. To respond honestly to `checkMessages` the server must return any relevant message it had at the time.
@@ -55,6 +57,8 @@ To access the server in proof-of-lockup, a user just buys some of the token and 
 To access the server in proof-of-burn, a user must buy some of the token and burn it in proportion to the time they want access to the server. This is appropriate for a steady state service, as the server continues to be paid via deflation, whereas if proof-of-lockup continued indefinitely users would no longer have to buy the token and the server wouldn't be rewarded. It is also better than microtransactions, as proof of burn rewards early investors and is technically simpler.
 
 <!-- TODO: discuss sending money back to the server as a non-micropayment. In particular, this will have  -->
+
+<!-- TODO: discuss minimum possible payment, how we can still offer reasonable services for free -->
 
 # Throughput
 
@@ -96,6 +100,12 @@ The point of stewarded systems is not to challenge the worlds most entrenched po
 
 ## Opsec
 
+## Legal
+
+<!-- TODO: discuss how we can put measures in place to prevent child porn etc -->
+<!-- TODO: discuss how we can cross jurisdictions -->
+<!-- TODO: discuss how we can agressively threaten people who do this -->
+<!-- TODO: discuss the best possible jurisdictions to house our servers -->
 ## Investor/Company Relations
 
 <!-- TODO: discuss how this is not strictly an LLC in which token investors own part of the company, but rather there is a company who owns the tokens, which are its main representation. Transfer proofs benefit the LLC, whereas burn benefits token holders. -->
@@ -108,3 +118,9 @@ Decentralised systems eventually reach dynamic equilibrium. They can handle stre
 <!-- TODO: consider possible decentralisation attempts -->
 
 # Pricing
+
+# Social Strategy
+
+<!-- TODO: do people care about free speech anyway? -->
+<!-- TODO: aren't people satisfied with the fractured internet as it is? -->
+<!-- TODO: how do we stop it from being perceived as a home for generally repulsive extremists? -->
