@@ -14,7 +14,7 @@ contract PostQueue {
         uint256 blockNumber;
     }
 
-    event Receipt(string message, address indexed poster, uint256 blockNumber, string signature);
+    event Receipt(string message, address indexed poster, uint256 blockNumber, bytes signature);
 
     Request[] requests;
     uint256 index;
@@ -23,6 +23,7 @@ contract PostQueue {
 
     constructor(address _serverEthAddress, uint256 _leeway) {
         serverEthAddress = _serverEthAddress;
+        leeway = _leeway;
         index = 0;
 
     }
@@ -31,15 +32,15 @@ contract PostQueue {
         requests.push(Request(message, msg.sender, block.number));
     }
 
-    function dequeue(string memory signature) public {
-        bytes32 hash = keccak256(abi.encode(requests[index].message, requests[index].address, requests[index].blockNumber);
-        require(hash.recover(signature) == serverEthAddress, "Request receipts must be signed by the server");
-        emit Receipt(requests[index].message, requests[index].address, requests[index].blockNumber, signature);
+    function dequeue(bytes memory signature) public {
+        bytes32 hash = keccak256(abi.encode(requests[index].message, requests[index].poster, requests[index].blockNumber));
+        require(hash.toEthSignedMessageHash().recover(signature) == serverEthAddress, "Request receipts must be signed by the server");
+        emit Receipt(requests[index].message, requests[index].poster, requests[index].blockNumber, signature);
         index++;
     }
 
-    function late() public view returns (bool){
-        return requests[index].blockNumber + leeway < block.number
+    function late() public view returns (bool) {
+        return requests[index].blockNumber + leeway < block.number;
     }
 
 }
