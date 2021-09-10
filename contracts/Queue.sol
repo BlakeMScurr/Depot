@@ -2,13 +2,10 @@
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./Pledge/Pledge.sol";
 
 contract Queue {
-    using ECDSA for bytes32;
-
-    event Receipt(string indexed meta, string indexed message, address indexed poster, uint256 blockNumber, bytes signature);
+    event Receipt(bytes indexed meta, bytes indexed message, address indexed user, uint256 blockNumber, bytes signature);
 
     Pledge.Request[] requests;
     uint256 index;
@@ -21,15 +18,15 @@ contract Queue {
         index = 0;
     }
 
-    function enqueue(string memory meta, string memory message) public {
+    function enqueue(bytes memory meta, bytes memory message) public {
         requests.push(Pledge.Request(meta, message, msg.sender, block.number));
     }
 
     function dequeue(bytes memory signature) public {
         Pledge.Request memory rq = requests[index];
-        bytes32 hash = keccak256(abi.encode(rq.meta, rq.message, rq.poster, rq.blockNumber));
-        require(hash.toEthSignedMessageHash().recover(signature) == serverEthAddress, "Request receipts must be signed by the server");
-        emit Receipt(rq.meta, rq.message, rq.poster, rq.blockNumber, signature);
+        Pledge.SignedRequest memory signed = Pledge.SignedRequest(rq, signature);
+        Pledge.requireValidSignature(signed, serverEthAddress);
+        emit Receipt(rq.meta, rq.message, rq.user, rq.blockNumber, signature);
         index++;
     }
 
