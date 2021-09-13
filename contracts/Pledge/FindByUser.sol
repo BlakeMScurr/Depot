@@ -24,7 +24,7 @@ contract FindByUser {
         // Secondly we check that the server's affadavit is internally consistent
         bool valid;
         Pledge.Request memory affadavit;
-        (affadavit, valid) = validFindResponse(findRequest, findResponse);
+        (affadavit, valid) = validAffadavit(findRequest, findResponse);
         if (!valid) {
             return true;
         }
@@ -41,7 +41,10 @@ contract FindByUser {
         }
 
         // We have already established that the server signed a store response by the user at issue before find request.
-        // If the server attested that there was no such store request, they broke their pledge. 
+        // If the server attested that there was no such store request, they broke their pledge.
+        // TODO: reexamine this carefully! Have we actually established that there was a valid and applicable piece of evidence?
+        // If so, do we need to be messing around with `address(0)` in validAffadavit? Perhaps once we've validated the evidence we just need to check if the affadavit
+        // was before or equal to the evidence.
         if (affadavit.user == address(0)) {
             return true;
         }
@@ -68,7 +71,7 @@ contract FindByUser {
 
     // Did the server provide a valid response to the find request?
     // In reponse to a find request, the server must provide a signed store request from the relevant user.
-    function validFindResponse(FindRequest memory findRequest, bytes memory findResponse) internal pure returns (Pledge.Request memory, bool) {
+    function validAffadavit(FindRequest memory findRequest, bytes memory findResponse) internal pure returns (Pledge.Request memory, bool) {
         // The data in the find response must simply an earlier store request.
         // TODO: return false is abi.decode reverts
         // We can't use try/catch or tryRevert in solidity at the moment https://github.com/ethereum/solidity/issues/10381
