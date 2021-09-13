@@ -14,80 +14,35 @@ contract FindByUser {
         address byUser;
     }
 
-    /** 
-    * To show that the server has responded incorrectly to a FindByUser request, the plaintiff must provide
-    */
     function isBroken(Pledge.SignedResponse[] memory receipts, address server) external pure returns (bool) {
-        // VALIDATE RECEIPTS (did the plaintiff provide the right kind of information in their case)
-        // The plaintiff has to provide a store request and a find request both correctly signed by the server, otherwise they can't prove anything about the pledge
-        Pledge.SignedResponse memory evidenceStoreResponse = receipts[0];
-        Pledge.SignedResponse memory findResponse = receipts[1];
+        // First we check that the plaintiff has provided valid evidence
+        bytes memory findResponse;
+        Pledge.SignedResponse memory evidence;
+        FindRequest memory findRequest;
+        (evidence, findRequest, findResponse) = validEvidence(receipts, server);
 
-        require(keccak256(abi.encodePacked(evidenceStoreResponse.request.meta)) == keccak256(abi.encodePacked("store")), "First request must be a store request");
-        require(keccak256(abi.encodePacked(findResponse.request.meta)) == keccak256(abi.encodePacked("find")), "Second request must be a find request");
-
-        Pledge.requireValidServerSignature(evidenceStoreResponse, server);
-        Pledge.requireValidServerSignature(findResponse, server);
-
-        FindRequest memory findRequest = abi.decode(findResponse.request.message, (FindRequest));
-
-        require(findRequest.fromBlockNumber + leeway < findResponse.request.blockNumber, "Find requests must refer to the past, since the server can't know what might be stored in the future");
-
-
-
-
-
-        // VALIDATE FIND RESPONSE (did the server provide the relevant kind of information in their signed response)
-        // In reponse to a find request, the server must provide a signed store request from the relevant user.
-        // TODO: do I need to make this a server signed request, or is a client signature sufficient? Even if we made it a server signed request, the server could just sign it immediately.
-        // TODO: respond true if this fails - the pledge requires that the server respond with some store request to any find request.
-        Pledge.Request memory attestedStoreRequest = abi.decode(findResponse.response, (Pledge.Request));
-
-        // The attested store request must indeed be a store request, or else the server broke pledge
-        if (keccak256(abi.encodePacked(attestedStoreRequest.meta)) != keccak256(abi.encodePacked("store"))) {
+        // Secondly we check that the server's affadavit is internally consistent
+        bool valid;
+        Pledge.Request memory affadavit;
+        (affadavit, valid) = validFindResponse(findRequest, findResponse);
+        if (!valid) {
             return true;
         }
 
-        // The attested store request must either be null, or be from the user asked about in the find request, or else the server broke pledge
-        if (keccak256(abi.encodePacked(findRequest.byUser)) != keccak256(abi.encodePacked(attestedStoreRequest.user)) && attestedStoreRequest.user != address(0)) {
-            return true;
-        }
+        // Finally we check whether the plaintiff's evidence proves that the server's affadavit is a lie
+        return weighEvidence(evidence, affadavit, findRequest);
+    }
 
-        // TODO: is the following necessary? "If the attested store request address is 0, the rest of the request must also be null"
-
-        // If the attested store request is not zero ...
-        if (attestedStoreRequest.user != address(0)) {
-            // ... the signature must be valid, otherwise the server has falsified data and broken the pledge.
-            if (!Pledge.validUserSignature(attestedStoreRequest)) {
-                return true;
-            }
-
-            // If the attested store request is from before the time specified in the find request, the server has attested to a falsehood.
-            if (attestedStoreRequest.blockNumber < findRequest.fromBlockNumber) {
-                return true;
-            }
-        }
-
-
-
-
-        // VALIDATE EVIDENCE APPLICABILITY (does the evidence provided by the plaintiff demonstrate that the attestation by the server was false?)
-
-        // If the the user referenced in the evidenceStoreResponse is not the same as the one in the find request, the pledge was not broken
-        if (keccak256(abi.encodePacked(evidenceStoreResponse.request.user)) == keccak256(abi.encodePacked(findRequest.byUser))) {
-            return false;
-        }
-
-        // If the server didn't necessarily know about the evidenceStoreResponse at the time of findResponse, the pledge was not broken
-        // TODO: do we need leeway? How could a user use the queue to trick the server into committing to a falsehood.
-        // The server must be robust to a chain reorg, and a user maliciously placing a request in the queue
-        if (evidenceStoreResponse.request.blockNumber > findResponse.request.blockNumber) {
+    // Does the evidence provided by the plaintiff demonstrate that the server's affadavit was false?
+    function weighEvidence(Pledge.SignedResponse memory evidence, Pledge.Request memory affadavit, FindRequest memory findRequest) internal pure returns (bool) {
+        // If the the user referenced in the evidence is not the same as the one in the find request, the pledge was not broken
+        if (keccak256(abi.encodePacked(evidence.request.user)) == keccak256(abi.encodePacked(findRequest.byUser))) {
             return false;
         }
 
         // We have already established that the server signed a store response by the user at issue before find request.
         // If the server attested that there was no such store request, they broke their pledge. 
-        if (attestedStoreRequest.user == address(0)) {
+        if (affadavit.user == address(0)) {
             return true;
         }
 
@@ -95,7 +50,7 @@ contract FindByUser {
         // Earlier first refers to blocknumber, then ties are broken on alphabetical order (TODO: is this safe or sensible??)
 
         // If the evidence and attested store requests are identical the server did not break their pledge
-        if (keccak256(abi.encode(evidenceStoreResponse.request)) == keccak256(abi.encode(attestedStoreRequest))) {
+        if (keccak256(abi.encode(evidence.request)) == keccak256(abi.encode(affadavit))) {
             return false;
         }
 
@@ -104,11 +59,65 @@ contract FindByUser {
         // - The evidence was before or at the same time as the attestated
         // The only remaining defence is that there were multiple store requests in the same block,
         // and that the server returned an "earlier" response (by some arbitrary tie break).
-        if (earlierOrEqual(attestedStoreRequest.message, evidenceStoreResponse.request.message)) {
+        if (earlierOrEqual(affadavit.message, evidence.request.message)) {
             return false;
         }
 
         return true;
+    }
+
+    // Did the server provide a valid response to the find request?
+    // In reponse to a find request, the server must provide a signed store request from the relevant user.
+    function validFindResponse(FindRequest memory findRequest, bytes memory findResponse) internal pure returns (Pledge.Request memory, bool) {
+        // The data in the find response must simply an earlier store request.
+        // TODO: return false is abi.decode reverts
+        // We can't use try/catch or tryRevert in solidity at the moment https://github.com/ethereum/solidity/issues/10381
+        // Instead we can put abi.decode in an external contract call and catch that contract's reversion. Possibly relevant blog post (from before there was try/catch) https://blog.polymath.network/try-catch-in-solidity-handling-the-revert-exception-f53718f76047
+        Pledge.Request memory affadavit = abi.decode(findResponse, (Pledge.Request));
+
+        // The attested store request must indeed be a store request, or else the server broke pledge
+        if (keccak256(abi.encodePacked(affadavit.meta)) != keccak256(abi.encodePacked("store"))) {
+            return (affadavit, false);
+        }
+
+        // The attested store request must either be null, or be from the user asked about in the find request, or else the server broke pledge
+        if (keccak256(abi.encodePacked(findRequest.byUser)) != keccak256(abi.encodePacked(affadavit.user)) && affadavit.user != address(0)) {
+            return (affadavit, false);
+        }
+
+        // If the attested store request is not zero ...
+        if (affadavit.user != address(0)) {
+            // ... the signature must be valid, otherwise the server has falsified data and broken the pledge.
+            if (!Pledge.validUserSignature(affadavit)) {
+                return (affadavit, false);
+            }
+
+            // If the attested store request is from before the time specified in the find request, the server has attested to a falsehood.
+            if (affadavit.blockNumber < findRequest.fromBlockNumber) {
+                return (affadavit, false);
+            }
+        }
+
+        return (affadavit, true);
+    }
+
+    // Did the plaintiff provide valid evidence for their case/
+    // The plaintiff has to provide a store request and a find request both correctly signed by the server, otherwise they can't prove anything about the pledge.
+    // Further, the findRequest must not ask about the future.
+    function validEvidence(Pledge.SignedResponse[] memory receipts, address server) internal pure returns (Pledge.SignedResponse memory, FindRequest memory, bytes memory) {
+        Pledge.SignedResponse memory evidence = receipts[0];
+        Pledge.SignedResponse memory findResponse = receipts[1];
+
+        require(keccak256(abi.encodePacked(evidence.request.meta)) == keccak256(abi.encodePacked("store")), "First request must be a store request");
+        require(keccak256(abi.encodePacked(findResponse.request.meta)) == keccak256(abi.encodePacked("find")), "Second request must be a find request");
+
+        Pledge.requireValidServerSignature(evidence, server);
+        Pledge.requireValidServerSignature(findResponse, server);
+
+        FindRequest memory findRequest = abi.decode(findResponse.request.message, (FindRequest));
+
+        require(findRequest.fromBlockNumber + leeway < findResponse.request.blockNumber, "Find requests must refer to the past, since the server can't know what might be stored in the future");
+        return (evidence, findRequest, findResponse.response);
     }
 
     // Arbitrary bitwise within-block request ordering scheme.
