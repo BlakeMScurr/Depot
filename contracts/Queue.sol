@@ -18,14 +18,14 @@ contract Queue {
         index = 0;
     }
 
-    function enqueue(bytes memory meta, bytes memory message) public {
-        requests.push(Pledge.Request(meta, message, msg.sender, block.number));
+    function enqueue(bytes memory meta, bytes memory message, bytes memory signature) public {
+        requests.push(Pledge.Request(meta, message, msg.sender, block.number, signature));
     }
 
-    function dequeue(bytes memory signature) public {
+    function dequeue(bytes memory signature, bytes memory response) public {
         Pledge.Request memory rq = requests[index];
-        Pledge.SignedRequest memory signed = Pledge.SignedRequest(rq, signature);
-        Pledge.requireValidSignature(signed, serverEthAddress);
+        Pledge.SignedResponse memory signed = Pledge.SignedResponse(rq, response, signature);
+        Pledge.requireValidServerSignature(signed, serverEthAddress);
         emit Receipt(rq.meta, rq.message, rq.user, rq.blockNumber, signature);
         index++;
     }

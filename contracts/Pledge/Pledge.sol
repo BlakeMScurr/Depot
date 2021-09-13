@@ -12,15 +12,22 @@ library Pledge {
         bytes message;
         address user;
         uint256 blockNumber;
-    }
-
-    struct SignedRequest {
-        Request request;
         bytes signature;
     }
 
-    function requireValidSignature(SignedRequest memory rq, address signer) public pure {
-        bytes32 hash = keccak256(abi.encode(rq.request.meta, rq.request.message, rq.request.user, rq.request.blockNumber));
-        require(hash.toEthSignedMessageHash().recover(rq.signature) == signer, "Signature must be valid");
+    struct SignedResponse {
+        Request request;
+        bytes response;
+        bytes signature;
+    }
+
+    function requireValidServerSignature(SignedResponse memory resp, address signer) public pure {
+        bytes32 hash = keccak256(abi.encode(resp.request, resp.response));
+        require(hash.toEthSignedMessageHash().recover(resp.signature) == signer, "Signature must be valid");
+    }
+
+    function validUserSignature(Request memory rq) public pure returns (bool) {
+        bytes32 hash = keccak256(abi.encode(rq.meta, rq.message, rq.user, rq.blockNumber));
+        return hash.toEthSignedMessageHash().recover(rq.signature) == rq.user;
     }
 }
