@@ -12,6 +12,7 @@ contract NextMessageByUser {
 
     struct FindRequest {
         uint256 fromBlockNumber;
+        bytes fromMessage;
         address byUser;
     }
 
@@ -86,17 +87,23 @@ contract NextMessageByUser {
         if (affadavit.blockNumber < findRequest.fromBlockNumber) {
             return (affadavit, false);
         }
+        // TODO: simplify `!y<=x` to `x<y` as above
+        if (!earlierOrEqual(findRequest.fromMessage, affadavit.message)) {
+            return (affadavit, false);
+        }
 
         return (affadavit, true);
     }
 
     // Did the plaintiff prove that Alice stored a message, then Alice's messages were asked for?
     // 
-    // The above breaks down into 4 claims:
+    // The above breaks down into several claims:
     // - Did the server sign some store request?
     // - Did the server sign a find request for some user's messages?
     // - Was the find request after the store request?
-    // - Do the store and find requests relate to the same user?
+    // - Is the evidence applicable to the find request, i.e.:
+    //      - Is the evidence from the user asked about in the find request?
+    //      - Is the evidence after or equal to the earliest message implied by the find request?
     function validEvidence(Pledge.SignedResponse[] memory receipts, address server) internal pure returns (Pledge.Request memory, FindRequest memory, bytes memory) {
         // Did the server sign a store and a find request?
         Pledge.SignedResponse memory evidence = receipts[0];
@@ -110,8 +117,14 @@ contract NextMessageByUser {
         FindRequest memory findRequest = abi.decode(findResponse.request.message, (FindRequest));
         require(findRequest.fromBlockNumber + leeway < findResponse.request.blockNumber, "Find requests must refer to the past, since the server can't know what might be stored in the future");
 
-        // Do the store and find requests relate to the same user?
+        // Is the evidence from the user asked about in the find request?
         require(findRequest.byUser == evidence.request.user);
+
+        // Is the evidence after or equal to the earliest message implied by the find request?
+        require(evidence.request.blockNumber >= findRequest.fromBlockNumber, "The evidence provided cannot be from an earlier block than the findRequest implies");
+        if (evidence.request.blockNumber == findRequest.fromBlockNumber) {
+            require(earlierOrEqual(evidence.request.message, findRequest.fromMessage), "If the evidence is from the earliest possible block that the findRequest implies, it mustn't be earlier within that block than the find request");
+        }
 
         return (evidence.request, findRequest, findResponse.response);
     }
@@ -123,6 +136,7 @@ contract NextMessageByUser {
             return a.length < b.length;
         }
 
+        // TODO: some bitwise operation could probably do this almost instantly
         uint256 i;
         for (i = a.length - 1; i >= 0; i--) {
             if (a[i] != b[i]) {
