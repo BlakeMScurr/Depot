@@ -2,9 +2,9 @@
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./IPledge.sol";
 import "./Pledge.sol";
+import "./ABIHack.sol";
 
 // By adhering to this contract, a server agrees that it will always provide the next message by a given user when asked.
 contract NextMessageByUser {
@@ -16,7 +16,12 @@ contract NextMessageByUser {
         address byUser;
     }
 
-    function isBroken(Pledge.SignedResponse[] memory receipts, address server) external pure returns (bool) {
+    ABIHack abiHack;
+    constructor(address _abiHack) {
+        abiHack = ABIHack(_abiHack);
+    }
+
+    function isBroken(Pledge.SignedResponse[] memory receipts, address server) external view returns (bool) {
         // First the plaintiff gives evidence that a message exists, and shows that it was requested
         bytes memory findResponse;
         Pledge.Request memory evidence;
@@ -64,10 +69,14 @@ contract NextMessageByUser {
     //
     // n.b., the affadavit is checked after the plaintiff's has proven that there exists some message that ought to have been
     // returned in the find response. So any error in the above requirements represents a broken pledge.
-    function validAffadavit(FindRequest memory findRequest, bytes memory findResponse) internal pure returns (Pledge.Request memory, bool) {
+    function validAffadavit(FindRequest memory findRequest, bytes memory findResponse) internal view returns (Pledge.Request memory, bool) {
         // The response to the find request must be a well formatted store request
-        // TODO: use external call to try/catch and return false, since solidity doesn't allow try/catch on abi.decode https://github.com/ethereum/solidity/issues/10381
-        Pledge.Request memory affadavit = abi.decode(findResponse, (Pledge.Request));
+        // Call an external contract to catch abi decoding errors
+        Pledge.Request memory affadavit;
+        try abiHack.isPledge(findResponse) {} catch {
+            return (affadavit, false);
+        }
+        affadavit = abi.decode(findResponse, (Pledge.Request));
 
         if (keccak256(abi.encodePacked(affadavit.meta)) != keccak256(abi.encodePacked("store"))) {
             return (affadavit, false);
