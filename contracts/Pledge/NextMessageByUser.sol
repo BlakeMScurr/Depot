@@ -26,14 +26,14 @@ contract NextMessageByUser {
         bytes memory findResponse;
         Pledge.Request memory evidence;
         FindRequest memory findRequest;
-        (evidence, findRequest, findResponse) = validEvidence(receipts, server);
+        (evidence, findRequest, findResponse) = requireValidEvidence(receipts, server);
 
         // Secondly the server gives an affadavit that it relayed some message when asked
-        bool valid;
+        bool invalid;
         Pledge.Request memory affadavit;
-        (affadavit, valid) = validAffadavit(findRequest, findResponse);
-        if (!valid) {
-            return true;
+        (affadavit, invalid) = invalidAffadavit(findRequest, findResponse);
+        if (invalid) {
+            return false;
         }
 
         // Finally we check that the message in the plaintiff's evidence is more recent than the message in the server's affadavit.
@@ -52,7 +52,7 @@ contract NextMessageByUser {
         }
 
         // The messages are from the same block, so the pledge is only broken if the evidence was earlier by some arbitrary tie break
-        if (earlierOrEqual(affadavit.message, evidence.message)) {
+        if (compare(affadavit.message, evidence.message) < 0) {
             return false;
         }
 
@@ -69,39 +69,39 @@ contract NextMessageByUser {
     //
     // n.b., the affadavit is checked after the plaintiff's has proven that there exists some message that ought to have been
     // returned in the find response. So any error in the above requirements represents a broken pledge.
-    function validAffadavit(FindRequest memory findRequest, bytes memory findResponse) internal view returns (Pledge.Request memory, bool) {
+    function invalidAffadavit(FindRequest memory findRequest, bytes memory findResponse) internal view returns (Pledge.Request memory, bool) {
         // The response to the find request must be a well formatted store request
         // Call an external contract to catch abi decoding errors
         Pledge.Request memory affadavit;
         try abiHack.isPledge(findResponse) {} catch {
-            return (affadavit, false);
+            return (affadavit, true);
         }
         affadavit = abi.decode(findResponse, (Pledge.Request));
 
         if (keccak256(abi.encodePacked(affadavit.meta)) != keccak256(abi.encodePacked("store"))) {
-            return (affadavit, false);
+            return (affadavit, true);
         }
 
         // The user who created the store request must be the one requested in the find request
         if (findRequest.byUser != affadavit.user) {
-            return (affadavit, false);
+            return (affadavit, true);
         }
 
         // The store request must be properly signed by the user
         if (!Pledge.validUserSignature(affadavit)) {
-            return (affadavit, false);
+            return (affadavit, true);
         }
 
         // The store request must be from the requested time or after
         if (affadavit.blockNumber < findRequest.fromBlockNumber) {
-            return (affadavit, false);
+            return (affadavit, true);
         }
-        // TODO: simplify `!y<=x` to `x<y` as above
-        if (!earlierOrEqual(findRequest.fromMessage, affadavit.message)) {
-            return (affadavit, false);
+        
+        if (compare(affadavit.message, findRequest.fromMessage) < 0) {
+            return (affadavit, true);
         }
 
-        return (affadavit, true);
+        return (affadavit, false);
     }
 
     // Did the plaintiff prove that Alice stored a message, then Alice's messages were asked for?
@@ -113,7 +113,7 @@ contract NextMessageByUser {
     // - Is the evidence applicable to the find request, i.e.:
     //      - Is the evidence from the user asked about in the find request?
     //      - Is the evidence after or equal to the earliest message implied by the find request?
-    function validEvidence(Pledge.SignedResponse[] memory receipts, address server) internal pure returns (Pledge.Request memory, FindRequest memory, bytes memory) {
+    function requireValidEvidence(Pledge.SignedResponse[] memory receipts, address server) internal pure returns (Pledge.Request memory, FindRequest memory, bytes memory) {
         // Did the server sign a store and a find request?
         Pledge.SignedResponse memory evidence = receipts[0];
         Pledge.SignedResponse memory findResponse = receipts[1];
@@ -123,6 +123,8 @@ contract NextMessageByUser {
         Pledge.requireValidServerSignature(findResponse, server);
 
         // Was the find request after the store request?
+        // It's OK if the decode fails, because that means the plaintiff has provided invalid evidence, which can't be used to demonstrate a broken pledge.
+        // The server can still be forced to sign valid find requests (via the queue), so it can't use this decoding step to avoid being held accountable for a broken pledge.
         FindRequest memory findRequest = abi.decode(findResponse.request.message, (FindRequest));
         require(findRequest.fromBlockNumber + leeway < findResponse.request.blockNumber, "Find requests must refer to the past, since the server can't know what might be stored in the future");
 
@@ -132,24 +134,25 @@ contract NextMessageByUser {
         // Is the evidence after or equal to the earliest message implied by the find request?
         require(evidence.request.blockNumber >= findRequest.fromBlockNumber, "The evidence provided cannot be from an earlier block than the findRequest implies");
         if (evidence.request.blockNumber == findRequest.fromBlockNumber) {
-            require(earlierOrEqual(evidence.request.message, findRequest.fromMessage), "If the evidence is from the earliest possible block that the findRequest implies, it mustn't be earlier within that block than the find request");
+            require(compare(evidence.request.message, findRequest.fromMessage) < 1, "If the evidence is from the earliest possible block that the findRequest implies, it mustn't be earlier within that block than the find request");
         }
 
         return (evidence.request, findRequest, findResponse.response);
     }
 
-    // Arbitrary bitwise within-block request ordering scheme.
+    // Arbitrary within-block request ordering scheme.
     // The only requirement is that it gives consistent results and runs cheaply.
-    function earlierOrEqual(bytes memory a, bytes memory b) internal pure returns (bool) {
+    // We return a negative if `a` is earlier, 0 if equal, and a positive if `a` is later.
+    function compare(bytes memory a, bytes memory b) internal pure returns (uint256) {
         if (a.length != b.length) {
-            return a.length < b.length;
+            return a.length - b.length; // shorter is earlier
         }
 
-        // TODO: some bitwise operation could probably do this almost instantly
+        // TODO(performance): some bitwise operation or casting sections to uint256 and using a simple comparison could probably speed this up. I should do profiling first. 
         uint256 i;
         for (i = a.length - 1; i >= 0; i--) {
             if (a[i] != b[i]) {
-                return a[i] < b[i];
+                return a[i] - b[i];
             }
         }
 
