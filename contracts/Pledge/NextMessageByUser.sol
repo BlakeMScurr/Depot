@@ -152,10 +152,10 @@ contract NextMessageByUser {
         uint256 i;
         for (i = a.length - 1; i >= 0; i--) {
             if (a[i] != b[i]) {
-                return a[i] - b[i];
+                return uint(uint8(a[i]) - uint8(b[i]));
             }
         }
 
-        return true;
+        return 0;
     }
 }
