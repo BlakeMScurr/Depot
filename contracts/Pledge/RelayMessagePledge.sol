@@ -10,8 +10,6 @@ import "./ABIHack.sol";
 // The servers hold all messages for each user in order. Anyone can request a message at any point in the ordering.
 // If the server responds with the wrong message, the pledge will be broken, and the server should be penalized.
 contract RelayMessagePledge {
-    uint256 constant leeway = 10;
-
     struct FindRequest {
         uint256 fromBlockNumber;
         bytes fromMessage;
@@ -29,7 +27,7 @@ contract RelayMessagePledge {
         FindRequest memory findRequest;
         bytes memory findResponse;
         Pledge.Request memory withheld;
-        (findRequest, findResponse, withheld) = validateEvidence(receipts, server);
+        (findRequest, findResponse, withheld) = validateReceipts(receipts, server);
 
         // We check that the server relayed a genuine message when asked
         bool valid;
@@ -43,8 +41,8 @@ contract RelayMessagePledge {
         return messageIsEarlier(withheld, relayed);
     }
 
-    // Requires that the evidence provided consistes of a wellformed store and find receipt, and that the find receipt applies to the store receipt.
-    function validateEvidence(Pledge.Receipt[] memory receipts, address server) internal pure returns (FindRequest memory, bytes memory, Pledge.Request memory) {
+    // Requires that we have a wellformed store and find receipt, and that the find receipt applies to the store receipt.
+    function validateReceipts(Pledge.Receipt[] memory receipts, address server) internal pure returns (FindRequest memory, bytes memory, Pledge.Request memory) {
         // Validate receipt types and signatures
         Pledge.Receipt memory storeReceipt = receipts[0];
         Pledge.Receipt memory findReceipt = receipts[1];
@@ -64,7 +62,7 @@ contract RelayMessagePledge {
             require(compare(findRequest.fromMessage, storeReceipt.request.message) < 1, "Message can't be a valid response to find request: stored before find request's start point within the same block");
         }
 
-        require(findRequest.fromBlockNumber + leeway < findReceipt.request.blockNumber, "Find requests must refer to the past, since the server can't know what might be stored in the future");
+        require(findRequest.fromBlockNumber < findReceipt.request.blockNumber, "Find requests must refer to the past, since the server can't know what might be stored in the future");
 
         return (findRequest, findReceipt.response, storeReceipt.request);
     }
