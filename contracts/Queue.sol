@@ -24,7 +24,7 @@ contract Queue {
 
     function dequeue(bytes memory signature, bytes memory response) public {
         Pledge.Request memory rq = requests[index];
-        Pledge.SignedResponse memory signed = Pledge.SignedResponse(rq, response, signature);
+        Pledge.Receipt memory signed = Pledge.Receipt(rq, response, signature);
         Pledge.requireValidServerSignature(signed, serverEthAddress);
         emit Receipt(rq.meta, rq.message, rq.user, rq.blockNumber, signature);
         index++;

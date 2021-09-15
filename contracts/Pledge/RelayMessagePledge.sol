@@ -1,0 +1,151 @@
+//SPDX-License-Identifier: Unlicense
+pragma solidity ^0.8.0;
+
+import "hardhat/console.sol";
+import "./IPledge.sol";
+import "./Pledge.sol";
+import "./ABIHack.sol";
+
+// A server that makes this pledge asserts that it will relay any messages that it is asked to store.
+// The servers hold all messages for each user in order. Anyone can request a message at any point in the ordering.
+// If the server responds with the wrong message, the pledge will be broken, and the server should be penalized.
+contract RelayMessagePledge {
+    uint256 constant leeway = 10;
+
+    struct FindRequest {
+        uint256 fromBlockNumber;
+        bytes fromMessage;
+        address byUser;
+    }
+
+    ABIHack abiHack;
+    constructor(address _abiHack) {
+        abiHack = ABIHack(_abiHack);
+    }
+
+    // Judges whether the server broke its pledge to relay messages.
+    function isBroken(Pledge.Receipt[] memory receipts, address server) external view returns (bool) {
+        // The plaintiff proves the alledgedly withheld message was stored and requested
+        FindRequest memory findRequest;
+        bytes memory findResponse;
+        Pledge.Request memory withheld;
+        (findRequest, findResponse, withheld) = validateEvidence(receipts, server);
+
+        // We check that the server relayed a genuine message when asked
+        bool valid;
+        Pledge.Request memory relayed;
+        (relayed, valid) = validRelay(findRequest, findResponse);
+        if (!valid) {
+            return true;
+        }
+
+        // If the withheld message was earlier than the relayed message, then the server is broken its pledge
+        return messageIsEarlier(withheld, relayed);
+    }
+
+    // Requires that the evidence provided consistes of a wellformed store and find receipt, and that the find receipt applies to the store receipt.
+    function validateEvidence(Pledge.Receipt[] memory receipts, address server) internal pure returns (FindRequest memory, bytes memory, Pledge.Request memory) {
+        // Validate receipt types and signatures
+        Pledge.Receipt memory storeReceipt = receipts[0];
+        Pledge.Receipt memory findReceipt = receipts[1];
+        require(keccak256(abi.encodePacked(storeReceipt.request.meta)) == keccak256(abi.encodePacked("store")), "First request must be a store request");
+        require(keccak256(abi.encodePacked(findReceipt.request.meta)) == keccak256(abi.encodePacked("find")), "Second request must be a find request");
+        Pledge.requireValidServerSignature(storeReceipt, server);
+        Pledge.requireValidServerSignature(findReceipt, server);
+
+        // Validate find request format - the server can't be held to illformed requests
+        FindRequest memory findRequest = abi.decode(findReceipt.request.message, (FindRequest));
+
+
+        // Validate applicability of find request to store request
+        require(findRequest.byUser == storeReceipt.request.user, "Find and store request relate to different users");
+        require(findRequest.fromBlockNumber <= storeReceipt.request.blockNumber, "Message can't be a valid response to find request: stored before find request's start block");
+        if (findRequest.fromBlockNumber == storeReceipt.request.blockNumber) {
+            require(compare(findRequest.fromMessage, storeReceipt.request.message) < 1, "Message can't be a valid response to find request: stored before find request's start point within the same block");
+        }
+
+        require(findRequest.fromBlockNumber + leeway < findReceipt.request.blockNumber, "Find requests must refer to the past, since the server can't know what might be stored in the future");
+
+        return (findRequest, findReceipt.response, storeReceipt.request);
+    }
+
+    // Did the server provide a valid response to the find request? i.e.:
+    // - The response to the find request must be a well formatted store request
+    // - The user who created the store request must be the one requested in the find request
+    // - The store request must be properly signed by the user
+    // - The store request must be from the requested time or after
+    //
+    // n.b., the relayed message is checked after the plaintiff's has proven that there exists some message that ought to have been
+    // returned in the find response. So any error in the above requirements immediately implied a broken pledge.
+    function validRelay(FindRequest memory findRequest, bytes memory findResponse) internal view returns (Pledge.Request memory, bool) {
+        // The response to the find request must be a well formatted store request
+        // Call an external contract to catch abi decoding errors
+        Pledge.Request memory relayed;
+        try abiHack.isPledge(findResponse) {} catch {
+            return (relayed, false);
+        }
+        relayed = abi.decode(findResponse, (Pledge.Request));
+
+        if (keccak256(abi.encodePacked(relayed.meta)) != keccak256(abi.encodePacked("store"))) {
+            return (relayed, false);
+        }
+
+        // The user who created the store request must be the one requested in the find request
+        if (findRequest.byUser != relayed.user) {
+            return (relayed, false);
+        }
+
+        // The store request must be properly signed by the user
+        if (!Pledge.validUserSignature(relayed)) {
+            return (relayed, false);
+        }
+
+        // The store request must be from the requested time or after
+        if (relayed.blockNumber < findRequest.fromBlockNumber) {
+            return (relayed, false);
+        }
+        
+        if (compare(relayed.message, findRequest.fromMessage) < 0) {
+            return (relayed, false);
+        }
+
+        return (relayed, true);
+    }
+
+    // Was the withheld message earlier than the relayed message?
+    function messageIsEarlier(Pledge.Request memory withheld, Pledge.Request memory relayed) internal pure returns (bool) {
+        if (relayed.blockNumber < withheld.blockNumber) {
+            // If the relayed message was from an earlier block, the pledge wasn't broken
+            return false;
+        } else if (relayed.blockNumber > withheld.blockNumber) {
+            // If the withheld was from an earlier block, the pledge was broken
+            return true;
+        }
+
+        // The messages are from the same block, so the pledge is only broken if the withheld message was earlier by some arbitrary tie break
+        if (compare(relayed.message, withheld.message) < 0) {
+            return false;
+        }
+
+        return true;
+    }
+
+    // Arbitrary within-block request ordering scheme.
+    // The only requirement is that it gives consistent results and runs cheaply.
+    // We return a negative if `a` is earlier, 0 if equal, and a positive if `a` is later.
+    function compare(bytes memory a, bytes memory b) internal pure returns (uint256) {
+        if (a.length != b.length) {
+            return a.length - b.length; // shorter is earlier
+        }
+
+        // TODO(performance): some bitwise operation or casting sections to uint256 and using a simple comparison could probably speed this up. I should do profiling first. 
+        uint256 i;
+        for (i = a.length - 1; i >= 0; i--) {
+            if (a[i] != b[i]) {
+                return uint(uint8(a[i]) - uint8(b[i]));
+            }
+        }
+
+        return 0;
+    }
+}

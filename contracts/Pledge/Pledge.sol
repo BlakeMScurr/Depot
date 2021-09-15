@@ -15,13 +15,13 @@ library Pledge {
         bytes signature;
     }
 
-    struct SignedResponse {
+    struct Receipt {
         Request request;
         bytes response;
         bytes signature;
     }
 
-    function requireValidServerSignature(SignedResponse memory resp, address signer) public pure {
+    function requireValidServerSignature(Receipt memory resp, address signer) public pure {
         bytes32 hash = keccak256(abi.encode(resp.request, resp.response));
         require(hash.toEthSignedMessageHash().recover(resp.signature) == signer, "Signature must be valid");
     }
