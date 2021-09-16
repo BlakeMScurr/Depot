@@ -6,9 +6,9 @@ import "./IPledge.sol";
 import "./Pledge.sol";
 import "./ABIHack.sol";
 
-// A server that makes this pledge asserts that it will relay any messages that it is asked to store.
-// The servers hold all messages for each user in order. Anyone can request a message at any point in the ordering.
-// If the server responds with the wrong message, the pledge will be broken, and the server should be penalized.
+// A server held to this pledge will relay any messages that it is asked to store.
+// The server holds all messages for each user in order. Anyone can request a message at any point in the ordering.
+// If the server responds with the wrong message, the pledge is broken, and the server can be penalized.
 contract RelayMessagePledge {
     struct FindRequest {
         uint256 fromBlockNumber;
@@ -23,7 +23,7 @@ contract RelayMessagePledge {
 
     // Judges whether the server broke its pledge to relay messages.
     function isBroken(Pledge.Receipt[] memory receipts, address server) external view returns (bool) {
-        // The plaintiff proves the alledgedly withheld message was stored and requested
+        // We check that the alledgedly withheld message was stored and requested
         FindRequest memory findRequest;
         bytes memory findResponse;
         Pledge.Request memory withheld;
