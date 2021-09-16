@@ -67,14 +67,7 @@ contract RelayMessagePledge {
         return (findRequest, findReceipt.response, storeReceipt.request);
     }
 
-    // Did the server provide a valid response to the find request? i.e.:
-    // - The response to the find request must be a well formatted store request
-    // - The user who created the store request must be the one requested in the find request
-    // - The store request must be properly signed by the user
-    // - The store request must be from the requested time or after
-    //
-    // n.b., the relayed message is checked after the plaintiff's has proven that there exists some message that ought to have been
-    // returned in the find response. So any error in the above requirements immediately implied a broken pledge.
+    // Did the server respond to the find request with a valid message?
     function validRelay(FindRequest memory findRequest, bytes memory findResponse) internal view returns (Pledge.Request memory, bool) {
         // The response to the find request must be a well formatted store request
         // Call an external contract to catch abi decoding errors
