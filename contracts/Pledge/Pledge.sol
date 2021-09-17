@@ -27,7 +27,7 @@ library Pledge {
     }
 
     function validUserSignature(Request memory rq) public pure returns (bool) {
-        bytes32 hash = keccak256(abi.encode(rq.meta, rq.message, rq.user, rq.blockNumber));
+        bytes32 hash = keccak256(abi.encode(rq));
         return hash.toEthSignedMessageHash().recover(rq.signature) == rq.user;
     }
 }

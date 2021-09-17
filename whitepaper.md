@@ -34,9 +34,9 @@ In order to be trustworthy a server must be lively and honest. A lively server r
 
 ## Liveliness
 
-Liveliness is enforced with a ForceMove queue. It is in principle limited by the capacity of the underlying blockchain, but in practice both client and server benefit by cooperating off chain.
+Liveliness is enforced with a ForceMove pool. It is in principle limited by the capacity of the underlying blockchain, but in practice both client and server benefit by cooperating off chain.
 
-In the normal course of events the client creates an API request, signs it, and sends it directly to the server, expecting to be served. If the server fails to respond, the client can go to the blockchain and put the request into a queue. The server then has a certain amount of time to respond on chain, if it fails it incurs a substantial loss on its deposit/guarantee, some of which is gifted to the client as incentive.
+In the normal course of events the client creates an API request, signs it, and sends it directly to the server, expecting to be served. If the server fails to respond, the client can go to the blockchain and put the request into a pool. The server then has a certain amount of time to respond on chain, if it fails it incurs a substantial loss on its deposit/guarantee, some of which is gifted to the client as incentive.
 
 <!-- TODO: how short can the wait before slash be, to ensure that the transaction gets into the block. What MEV tricks can be used against me? -->
 
@@ -50,7 +50,7 @@ To keep itself honest, the server locks assets in a smart contract which specifi
 
 ## Payment
 
-The server needs to be incentivised for the service it provides. Therefore each client must prove that it has provided some value in order to access the API or the on chain request queue. Three approaches are discussed below, and ultimately a hybrid proof-of-lockup/proof-of-burn model is chosen. In any case, the steward starts by making a new (fungible) token and putting much of its supply on a DEX. 
+The server needs to be incentivised for the service it provides. Therefore each client must prove that it has provided some value in order to access the API or the on chain request pool. Three approaches are discussed below, and ultimately a hybrid proof-of-lockup/proof-of-burn model is chosen. In any case, the steward starts by making a new (fungible) token and putting much of its supply on a DEX. 
 
 To access the server in proof-of-lockup, a user just buys some of the token and locks for some subscription period. The price of the token rises, and the steward is able to cash out somewhat, since they own much of the supply. This is appropriate for an early stage service, where the token is largely bought by speculators and investors who don't want to spend or burn their funds.
 
@@ -62,31 +62,31 @@ To access the server in proof-of-burn, a user must buy some of the token and bur
 
 # Throughput
 
-The minimum possible throughput is defined by the throughput of the onchain request queue. In order to be credibly lively, enqueuing must be as cheap as possible.
+The minimum possible throughput is defined by the throughput of the onchain request pool. In order to be credibly lively, adding to the pool must be as cheap as possible.
 
-## d/e Ratio
+## r/a Ratio
 
-Let `d` be the gas cost the server must pay to dequeue a message, and let `e` be the gas cost a user must pay to enqueue a message. Malicious actors can always impose `d/e` times more economic damage to the server than it costs. If `d/e` is we 10, the malicious actor could spend 10k gas enqueuing a message to force the server to spend 100k gas dequeueing it.
+Let `r` be the gas cost the server must pay to remove a message from the pool, and let `a` be the gas cost a user must pay to add a message to the pool. Malicious actors can always impose `r/a` times more economic damage to the server than it costs. If `r/a` is we 10, the malicious actor could spend 10k gas adding a message to force the server to spend 100k gas removing it.
 
-On the other hand, a low `d/e` ratio reduces the server's incentive to respond off chain. I `d/e` were 0.1, the server could single censor a user, and only incur a 10k gas cost for every 100k gas the user spent enforcing their right to the service.
+On the other hand, a low `r/a` ratio reduces the server's incentive to respond off chain. I `r/a` were 0.1, the server could single censor a user, and only incur a 10k gas cost for every 100k gas the user spent enforcing their right to the service.
 
-Therefore the `d/e` ratio creates a tension between liveliness and robustness, each of which can be exploited by enemies of neutral infrastructure. We could attempt to decude a priori which attack is more likely and adjust the ratio accordingly. In the long run (30+ years), it's safe to assume that the founding principles of a company running a stewarded system will be diluted, and it will resemble any other corporation of similar size. Therefore we must guard equally against outside attacks, as against attacks by the server against its users, and the `d/e/` ratio should be approximately 1.
+Therefore the `r/a` ratio creates a tension between liveliness and robustness, each of which can be exploited by enemies of neutral infrastructure. We could attempt to decude a priori which attack is more likely and adjust the ratio accordingly. In the long run (30+ years), it's safe to assume that the founding principles of a company running a stewarded system will be diluted, and it will resemble any other corporation of similar size. Therefore we must guard equally against outside attacks, as against attacks by the server against its users, and the `r/a/` ratio should be approximately 1.
 
-We could provide an updating mechanism to alter the `d/e` ratio according to the needs of the time. However, since a steward could lower the `d/e` ratio to enable censorship, the updating mechanism would have to be finely balanced among participants. Such a mechanism would significantly increase the protocol's attack surface for little gain.
+We could provide an updating mechanism to alter the `r/a` ratio according to the needs of the time. However, since a steward could lower the `r/a` ratio to enable censorship, the updating mechanism would have to be finely balanced among participants. Such a mechanism would significantly increase the protocol's attack surface for little gain.
 
 ### Gas Splitting
 
 ## Multichain
 
-The server can increase minimum throughput by duplicating the request queue contract across layer 1s. The challenge in going multichain is that the client must demonstrate proof-of-burn/proof-of-ownership on chain 2, and the server must still have a liveliness guarantee on chain 2 that can be burned. As long as the request queue contract on chain 2 produces receipts that can be used in honesty arbitration on chain 1, the server needn't have an honesty guarantee on chain 2. This means that the server can utilise low trust chains by staking small guarantees, and achieve low certainty liveliness while retaining high certainty honesty.
+The server can increase minimum throughput by duplicating the request pool contract across layer 1s. The challenge in going multichain is that the client must demonstrate proof-of-burn/proof-of-ownership on chain 2, and the server must still have a liveliness guarantee on chain 2 that can be burned. As long as the request pool contract on chain 2 produces receipts that can be used in honesty arbitration on chain 1, the server needn't have an honesty guarantee on chain 2. This means that the server can utilise low trust chains by staking small guarantees, and achieve low certainty liveliness while retaining high certainty honesty.
 
 ### Proof of Ownership
 
-A simple solution to cross chain proof-of-ownership is to have a new token for each chain, and have the liveliness queue on chainX only accept proof of ownership for tokens on chainX. The tokens can then be pegged crosschain, ensuring a consistent price.
+A simple solution to cross chain proof-of-ownership is to have a new token for each chain, and have the liveliness pool on chainX only accept proof of ownership for tokens on chainX. The tokens can then be pegged crosschain, ensuring a consistent price.
 
 <!-- TODO: research - I have literally no idea how this works -->
 
-Alternatively, if smart contracts can read the state of other chains via oracles etc, proof of ownership could be enforced on the ledger of record, and request queue on scale ledgers can simply read it there. This means that subscription is always guaranteed by the ledger of record, and scale ledgers only require minimal trust.
+Alternatively, if smart contracts can read the state of other chains via oracles etc, proof of ownership could be enforced on the ledger of record, and request pool on scale ledgers can simply read it there. This means that subscription is always guaranteed by the ledger of record, and scale ledgers only require minimal trust.
 
 <!-- TODO: make nomenclature like "chain 2" "chainX" "ledger of record", and "scale ledgers" consistent -->
 
