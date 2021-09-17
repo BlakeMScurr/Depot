@@ -18,8 +18,10 @@ contract Queue {
         index = 0;
     }
 
-    function enqueue(bytes memory meta, bytes memory message, bytes memory signature) public {
-        requests.push(Pledge.Request(meta, message, msg.sender, block.number, signature));
+    function enqueue(Pledge.Request memory request) public {
+        require(Pledge.validUserSignature(request), "Invalid signature");
+        require(request.blockNumber >= block.number, "Enforcement period cannot start in the past");
+        requests.push(request); // TODO: binary lookup to find insertion point
     }
 
     function dequeue(bytes memory signature, bytes memory response) public {
