@@ -9,7 +9,7 @@ import "./ABIHack.sol";
 // A server held to this pledge will relay any messages that it is asked to store.
 // The server holds all messages for each user in order. Anyone can request a message at any point in the ordering.
 // If the server responds with the wrong message, the pledge is broken, and the server can be penalized.
-contract RelayMessagePledge {
+contract RelayPledge {
     struct FindRequest {
         uint256 fromBlockNumber;
         bytes fromMessage;
