@@ -81,22 +81,21 @@ contract RelayPledge {
             return (relayed, false);
         }
 
-        // The user who created the store request must be the one requested in the find request
-        if (findRequest.byUser != relayed.user) {
-            return (relayed, false);
-        }
-
         // The store request must be properly signed by the user
         if (!Pledge.validUserSignature(relayed)) {
             return (relayed, false);
         }
 
-        // The store request must be from the requested time or after
-        if (relayed.blockNumber < findRequest.fromBlockNumber) {
+        // The user who created the store request must be the one requested in the find request
+        if (findRequest.byUser != relayed.user) {
             return (relayed, false);
         }
-        
-        if (compare(relayed.message, findRequest.fromMessage) < 0) {
+
+        // The store request must be from the requested point or after
+        if (relayed.blockNumber < findRequest.fromBlockNumber ||
+            (relayed.blockNumber < findRequest.fromBlockNumber &&
+            compare(relayed.message, findRequest.fromMessage) < 0)
+        ) {
             return (relayed, false);
         }
 
