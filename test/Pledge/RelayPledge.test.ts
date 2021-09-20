@@ -91,4 +91,10 @@ describe("RelayPledge", function () {
       }
     }
   })
+
+  describe("Valid Relay", () => {
+    it("Should reject malformatted replies", async () => {
+      
+    })
+  })
 });
