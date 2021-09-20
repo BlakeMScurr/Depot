@@ -105,20 +105,12 @@ contract RelayPledge {
 
     // Was the withheld message earlier than the relayed message?
     function messageIsEarlier(Pledge.Request memory withheld, Pledge.Request memory relayed) internal pure returns (bool) {
-        if (relayed.blockNumber < withheld.blockNumber) {
-            // If the relayed message was from an earlier block, the pledge wasn't broken
-            return false;
-        } else if (relayed.blockNumber > withheld.blockNumber) {
-            // If the withheld was from an earlier block, the pledge was broken
-            return true;
+        if (withheld.blockNumber != relayed.blockNumber) {
+            return withheld.blockNumber < relayed.blockNumber;
         }
 
-        // The messages are from the same block, so the pledge is only broken if the withheld message was earlier by some arbitrary tie break
-        if (compare(relayed.message, withheld.message) < 0) {
-            return false;
-        }
-
-        return true;
+        // The messages are from the same block, so the pledge is broken iff the withheld message was earlier by some arbitrary tie break
+        return compare(withheld.message, relayed.message) < 0;
     }
 
     // Arbitrary within-block request ordering scheme.
