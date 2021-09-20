@@ -124,16 +124,21 @@ contract RelayPledge {
     // Arbitrary within-block request ordering scheme.
     // The only requirement is that it gives consistent results and runs cheaply.
     // We return a negative if `a` is earlier, 0 if equal, and a positive if `a` is later.
-    function compare(bytes memory a, bytes memory b) internal pure returns (uint256) {
-        if (a.length != b.length) {
-            return a.length - b.length; // shorter is earlier
+    function compare(bytes memory a, bytes memory b) internal pure returns (int16) {
+        if (uint(a.length) != uint(b.length)) {
+            // shorter is earlier
+            if (uint(a.length) < uint(b.length)) {
+                return -1;
+            } else {
+                return 1;
+            }
         }
 
         // TODO(performance): some bitwise operation or casting sections to uint256 and using a simple comparison could probably speed this up. I should do profiling first. 
         uint256 i;
-        for (i = a.length - 1; i >= 0; i--) {
+        for (i = 0; i < a.length; i++) {
             if (a[i] != b[i]) {
-                return uint(uint8(a[i]) - uint8(b[i]));
+                return int16(uint8(a[i])) - int16(uint8(b[i]));
             }
         }
 
