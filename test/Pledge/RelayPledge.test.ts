@@ -28,15 +28,16 @@ describe("RelayPledge", function () {
 
   it("Compares messages", async function () {
     let orderedMessages = [
-      ethers.utils.toUtf8Bytes("0x00"),
-      ethers.utils.toUtf8Bytes("0x01"),
-      ethers.utils.toUtf8Bytes("0x0000"),
-      ethers.utils.toUtf8Bytes("0x0001"),
-      ethers.utils.toUtf8Bytes("0x000a"),
-      ethers.utils.toUtf8Bytes("0x000b"),
-      ethers.utils.toUtf8Bytes("0x00a0"),
-      ethers.utils.toUtf8Bytes("0xa000"),
-      ethers.utils.toUtf8Bytes("0x000000"),
+      ethers.utils.toUtf8Bytes(""),
+      ethers.utils.toUtf8Bytes("0"),
+      ethers.utils.toUtf8Bytes("1"),
+      ethers.utils.toUtf8Bytes("00"),
+      ethers.utils.toUtf8Bytes("01"),
+      ethers.utils.toUtf8Bytes("0a"),
+      ethers.utils.toUtf8Bytes("0b"),
+      ethers.utils.toUtf8Bytes("a0"),
+      ethers.utils.toUtf8Bytes("b0"),
+      ethers.utils.toUtf8Bytes("000"),
     ]
 
     for (var i = 0; i < orderedMessages.length; i++) {
@@ -54,11 +55,12 @@ describe("RelayPledge", function () {
 
   it("Finds earlier messages", async () => {
     let orderedRequests = [
-      await newRequest(poster, "store", "0x01", 1),
-      await newRequest(poster, "store", "0x01", 2),
-      await newRequest(poster, "store", "0x11", 2),
-      await newRequest(poster, "store", "0x0000", 2),
-      await newRequest(poster, "store", "0x00", 3),
+      await newRequest(poster, "store", "01", 1),
+      await newRequest(poster, "store", "01", 2),
+      await newRequest(poster, "store", "11", 2),
+      await newRequest(poster, "store", "0000", 2),
+      await newRequest(poster, "store", "00", 3),
+      await newRequest(poster, "store", "", 4),
     ];
 
     for (var i = 0; i < orderedRequests.length; i++) {
@@ -74,58 +76,58 @@ describe("RelayPledge", function () {
 
   describe("Valid Relay", () => {
     it("Allows later relays", async () => {
-      let relayed = await newRequest(poster, "store", "0x01", 2)
-      let find = new findRequest(1, "0x00", await poster.getAddress())
+      let relayed = await newRequest(poster, "store", "1", 2)
+      let find = new findRequest(1, "0", await poster.getAddress())
       expect((await exposedRelayPledge._validRelay(find, relayed.encodeAsBytes()))[1]).to.equal(true);
     })
 
     it("Allows exact relays", async () => {
-      let relayed = await newRequest(poster, "store", "0x00", 1)
-      let find = new findRequest(1, "0x00", await poster.getAddress())
+      let relayed = await newRequest(poster, "store", "0", 1)
+      let find = new findRequest(1, "0", await poster.getAddress())
       expect((await exposedRelayPledge._validRelay(find, relayed.encodeAsBytes()))[1]).to.equal(true);
     })
 
     it("Rejects malformed relays", async () => {
-      let find = new findRequest(1, "0x00", await poster.getAddress())
-      expect((await exposedRelayPledge._validRelay(find, ethers.utils.toUtf8Bytes("0x00")))[1]).to.equal(false);
+      let find = new findRequest(1, "0", await poster.getAddress())
+      expect((await exposedRelayPledge._validRelay(find, ethers.utils.toUtf8Bytes("0")))[1]).to.equal(false);
     })
 
     it("Rejects non store requests as find responses", async () => {
-      let relayed = await newRequest(poster, "non-store", "0x01", 2)
-      let find = new findRequest(1, "0x00", await poster.getAddress())
+      let relayed = await newRequest(poster, "non-store", "1", 2)
+      let find = new findRequest(1, "0", await poster.getAddress())
       expect((await exposedRelayPledge._validRelay(find, relayed.encodeAsBytes()))[1]).to.equal(false);
     })
 
     it("Rejects responses from irrelevant users", async () => {
-      let relayed = await newRequest(reader, "non-store", "0x01", 2)
-      let find = new findRequest(1, "0x00", await poster.getAddress())
+      let relayed = await newRequest(reader, "non-store", "1", 2)
+      let find = new findRequest(1, "0", await poster.getAddress())
       expect((await exposedRelayPledge._validRelay(find, relayed.encodeAsBytes()))[1]).to.equal(false);
     })
 
     it("Rejects garbage signatures", async () => {
-      let relayed = await newRequest(poster, "store", "0x01", 2)
-      relayed.signature = ethers.utils.toUtf8Bytes("0xsomerandomthing")
-      let find = new findRequest(1, "0x00", await poster.getAddress())
+      let relayed = await newRequest(poster, "store", "1", 2)
+      relayed.signature = ethers.utils.toUtf8Bytes("somerandomthing")
+      let find = new findRequest(1, "0", await poster.getAddress())
       expect((await exposedRelayPledge._validRelay(find, relayed.encodeAsBytes()))[1]).to.equal(false);
     })
 
     it("Rejects invalid signatures", async () => {
-      let relayed = await newRequest(poster, "store", "0x01", 2)
-      let signed = await newRequest(poster, "someothermeta", "0xsomeothermessage", 2)
+      let relayed = await newRequest(poster, "store", "1", 2)
+      let signed = await newRequest(poster, "someothermeta", "someothermessage", 2)
       relayed.signature = signed.signature
-      let find = new findRequest(1, "0x00", await poster.getAddress())
+      let find = new findRequest(1, "0", await poster.getAddress())
       expect((await exposedRelayPledge._validRelay(find, relayed.encodeAsBytes()))[1]).to.equal(false);
     })
 
     it("Rejects messages from earlier blocks", async () => {
-      let relayed = await newRequest(poster, "store", "0x01", 1)
-      let find = new findRequest(2, "0x00", await poster.getAddress())
+      let relayed = await newRequest(poster, "store", "1", 1)
+      let find = new findRequest(2, "0", await poster.getAddress())
       expect((await exposedRelayPledge._validRelay(find, relayed.encodeAsBytes()))[1]).to.equal(false);
     })
 
     it("Rejects alphabetically earlier messages", async () => {
-      let relayed = await newRequest(poster, "store", "0x00", 2)
-      let find = new findRequest(2, "0x01", await poster.getAddress())
+      let relayed = await newRequest(poster, "store", "0", 2)
+      let find = new findRequest(2, "1", await poster.getAddress())
       expect((await exposedRelayPledge._validRelay(find, relayed.encodeAsBytes()))[1]).to.equal(false);
     })
   })
