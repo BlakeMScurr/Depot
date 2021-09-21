@@ -3,14 +3,16 @@ import { ethers } from "hardhat";
 import * as e from "ethers";
 import { ExposedRelayPledge__factory, ABIHack__factory, Pledge__factory, ExposedRelayPledge } from "../../typechain"
 import * as contract from "../../artifacts/contracts/Pledge/Test.sol/ExposedRelayPledge.json";
-import { Request, newRequest } from "../../offchain/Requests"
+import { Request, newRequest, findRequest } from "../../offchain/Requests"
 
 describe("RelayPledge", function () {
   let exposedRelayPledge: ExposedRelayPledge;
   let contractInterface: e.ethers.utils.Interface;
-  let signers: e.Signer[];
+  let server: e.Signer;
+  let poster: e.Signer;
+  let reader: e.Signer;
   this.beforeAll(async () => {
-    signers = await ethers.getSigners();
+    const signers = await ethers.getSigners();
     const abiHack = await new ABIHack__factory(signers[0]).deploy();
 
     const pledge = await new Pledge__factory(signers[0]).deploy();
@@ -18,6 +20,10 @@ describe("RelayPledge", function () {
 
     exposedRelayPledge = await new ExposedRelayPledge__factory(pledgeLibrary, signers[0]).deploy(abiHack.address);
     contractInterface = new ethers.utils.Interface(contract.abi);
+
+    server = signers[1];
+    poster = signers[2];
+    reader = signers[3];
   }) 
 
   it("Should compare messages", async function () {
@@ -48,11 +54,11 @@ describe("RelayPledge", function () {
 
   it("Should find earlier messages", async () => {
     let orderedRequests = [
-      await newRequest(signers[1], "store", "0x01", 1),
-      await newRequest(signers[1], "store", "0x01", 2),
-      await newRequest(signers[1], "store", "0x11", 2),
-      await newRequest(signers[1], "store", "0x0000", 2),
-      await newRequest(signers[1], "store", "0x00", 3),
+      await newRequest(poster, "store", "0x01", 1),
+      await newRequest(poster, "store", "0x01", 2),
+      await newRequest(poster, "store", "0x11", 2),
+      await newRequest(poster, "store", "0x0000", 2),
+      await newRequest(poster, "store", "0x00", 3),
     ];
 
     for (var i = 0; i < orderedRequests.length; i++) {
@@ -68,7 +74,10 @@ describe("RelayPledge", function () {
 
   describe("Valid Relay", () => {
     it("Should allow correct relays", async () => {
-      
+      let relayed = await newRequest(poster, "store", "0x01", 2)
+      let find = new findRequest(1, "0x00", await poster.getAddress())
+
+      expect((await exposedRelayPledge._validRelay(find, relayed.encodeAsBytes()))[1]).to.equal(true);
     })
   })
 });

@@ -72,10 +72,10 @@ contract RelayPledge {
         // The response to the find request must be a well formatted store request
         // Call an external contract to catch abi decoding errors
         Pledge.Request memory relayed;
+        relayed = abi.decode(findResponse, (Pledge.Request));
         try abiHack.isPledge(findResponse) {} catch {
             return (relayed, false);
         }
-        relayed = abi.decode(findResponse, (Pledge.Request));
 
         if (keccak256(abi.encodePacked(relayed.meta)) != keccak256(abi.encodePacked("store"))) {
             return (relayed, false);
@@ -116,20 +116,15 @@ contract RelayPledge {
     // The only requirement is that it gives consistent results and runs cheaply.
     // We return a negative if `a` is earlier, 0 if equal, and a positive if `a` is later.
     function compare(bytes memory a, bytes memory b) internal pure returns (int16) {
-        if (uint(a.length) != uint(b.length)) {
-            // shorter is earlier
-            if (uint(a.length) < uint(b.length)) {
-                return -1;
-            } else {
-                return 1;
-            }
+        if (a.length != b.length) {
+            return a.length < b.length? -1 : int8(1);
         }
 
         // TODO(performance): some bitwise operation or casting sections to uint256 and using a simple comparison could probably speed this up. I should do profiling first. 
         uint256 i;
         for (i = 0; i < a.length; i++) {
             if (a[i] != b[i]) {
-                return int16(uint8(a[i])) - int16(uint8(b[i]));
+                return a[i] < b[i] ? -1: int8(1);
             }
         }
 
