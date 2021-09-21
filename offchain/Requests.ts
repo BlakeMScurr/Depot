@@ -51,9 +51,9 @@ export class findRequest {
   fromMessage: ethers.BytesLike;
   byUser: string;
 
-  constructor(fromBlockNumber: ethers.BigNumberish, fromMessage: ethers.BytesLike, byUser: string) {
+  constructor(fromBlockNumber: ethers.BigNumberish, fromMessage: string, byUser: string) {
     this.fromBlockNumber = fromBlockNumber;
-    this.fromMessage = fromMessage;
+    this.fromMessage = ethers.utils.toUtf8Bytes(fromMessage);
     this.byUser = byUser;
   }
 }

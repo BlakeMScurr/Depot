@@ -72,17 +72,21 @@ contract RelayPledge {
         // The response to the find request must be a well formatted store request
         // Call an external contract to catch abi decoding errors
         Pledge.Request memory relayed;
-        relayed = abi.decode(findResponse, (Pledge.Request));
         try abiHack.isPledge(findResponse) {} catch {
             return (relayed, false);
         }
+        relayed = abi.decode(findResponse, (Pledge.Request));
 
         if (keccak256(abi.encodePacked(relayed.meta)) != keccak256(abi.encodePacked("store"))) {
             return (relayed, false);
         }
 
         // The store request must be properly signed by the user
-        if (!Pledge.validUserSignature(relayed)) {
+        try Pledge.validUserSignature(relayed) returns (bool valid) {
+            if (!valid) {
+                return (relayed, false);
+            }
+        } catch {
             return (relayed, false);
         }
 
@@ -93,7 +97,7 @@ contract RelayPledge {
 
         // The store request must be from the requested point or after
         if (relayed.blockNumber < findRequest.fromBlockNumber ||
-            (relayed.blockNumber < findRequest.fromBlockNumber &&
+            (relayed.blockNumber == findRequest.fromBlockNumber &&
             compare(relayed.message, findRequest.fromMessage) < 0)
         ) {
             return (relayed, false);
