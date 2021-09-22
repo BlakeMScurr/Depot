@@ -3,7 +3,7 @@ import { ethers } from "hardhat";
 import * as e from "ethers";
 import { ExposedRelayPledge__factory, RelayPledge__factory, ABIHack__factory, Pledge__factory, ExposedRelayPledge, RelayPledge } from "../../typechain"
 import * as contract from "../../artifacts/contracts/Pledge/Test.sol/ExposedRelayPledge.json";
-import { newRequest, findRequest, newReceipt } from "../../offchain/Requests"
+import { newRequest, findRequest, newReceipt, Request } from "../../offchain/Requests"
 
 describe("RelayPledge", function () {
   let exposedRelayPledge: ExposedRelayPledge;
@@ -30,98 +30,63 @@ describe("RelayPledge", function () {
 
   describe("Pledge Broken", () => {
     it("Keeps pledge intact for identical withheld/relayed", async () => {
-      let storeReceipt = await newReceipt(
-        server,
-        await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 1),
-        ethers.utils.toUtf8Bytes(""), // server response to store is irrevelant aside from signature
+      await isBrokenTest(
+        await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 1), // withheld
+        new findRequest(1, "", await poster.getAddress()), // requested
+        await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 1), // relayed
+        false,
       )
-
-      expect(await relayPledge.isBroken(
-        [
-          storeReceipt,
-          await newReceipt(
-            server,
-            await newRequest(
-              reader,
-              "find",
-              new findRequest(1, "", await poster.getAddress()).encodeAsBytes(),
-              2,
-            ),
-            storeReceipt.request.encodeAsBytes(),
-          )
-        ],
-        await server.getAddress(),
-      )).to.equal(false);
     })
 
     it("Keeps pledge intact for earlier relayed than withheld (if relayed after request bounds)", async () => {
-      expect(await relayPledge.isBroken(
-        [
-          await newReceipt(
-            server,
-            await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 2), // withheld
-            ethers.utils.toUtf8Bytes(""),
-          ),
-          await newReceipt(
-            server,
-            await newRequest(
-              reader,
-              "find",
-              new findRequest(1, "", await poster.getAddress()).encodeAsBytes(), // requested
-              2,
-            ),
-            (await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 1)).encodeAsBytes(), // relayed
-          )
-        ],
-        await server.getAddress(),
-      )).to.equal(false);
+      await isBrokenTest(
+        await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 2), // withheld
+        new findRequest(1, "", await poster.getAddress()), // requested
+        await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 1), // relayed
+        false,
+      )
     })
 
     it("Breaks pledge for relayed is before request bounds", async () => {
-      expect(await relayPledge.isBroken(
-        [
-          await newReceipt(
-            server,
-            await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 1), // withheld
-            ethers.utils.toUtf8Bytes(""),
-          ),
-          await newReceipt(
-            server,
-            await newRequest(
-              reader,
-              "find",
-              new findRequest(1, "", await poster.getAddress()).encodeAsBytes(), // requested
-              2,
-            ),
-            (await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 0)).encodeAsBytes(), // relayed
-          )
-        ],
-        await server.getAddress(),
-      )).to.equal(true);
+      await isBrokenTest(
+        await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 1), // withheld
+        new findRequest(1, "", await poster.getAddress()), // requested
+        await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 0), // relayed
+        true,
+      )
     })
 
     it("Breaks pledge for earlier withheld than relayed", async () => {
+      await isBrokenTest(
+        await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 2), // withheld
+        new findRequest(1, "", await poster.getAddress()), // requested
+        await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 3), // relayed
+        true,
+      )
+    })
+
+    async function isBrokenTest(withheld: Request, requested: findRequest, relayed: Request, value: boolean) {
       expect(await relayPledge.isBroken(
         [
           await newReceipt(
             server,
-            await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 2), // withheld
-            ethers.utils.toUtf8Bytes(""),
+            withheld,
+            ethers.utils.toUtf8Bytes(""), // server response to store is irrevelant - signature is sufficient
           ),
           await newReceipt(
             server,
             await newRequest(
               reader,
               "find",
-              new findRequest(1, "", await poster.getAddress()).encodeAsBytes(), // requested
+              requested.encodeAsBytes(),
               2,
             ),
-            (await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 3)).encodeAsBytes(), // relayed
+            relayed.encodeAsBytes(),
           )
         ],
         await server.getAddress(),
-      )).to.equal(true);
-    })
+      )).to.equal(value);
+    }
   })
 
   describe("Validate Receipts", () => {
