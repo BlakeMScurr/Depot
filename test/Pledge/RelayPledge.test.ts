@@ -1,13 +1,13 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import * as e from "ethers";
-import { ExposedRelayPledge__factory, ABIHack__factory, Pledge__factory, ExposedRelayPledge } from "../../typechain"
+import { ExposedRelayPledge__factory, RelayPledge__factory, ABIHack__factory, Pledge__factory, ExposedRelayPledge, RelayPledge } from "../../typechain"
 import * as contract from "../../artifacts/contracts/Pledge/Test.sol/ExposedRelayPledge.json";
-import { Request, newRequest, findRequest, Receipt, newReceipt } from "../../offchain/Requests"
-import { SSL_OP_TLS_BLOCK_PADDING_BUG } from "constants";
+import { newRequest, findRequest, newReceipt } from "../../offchain/Requests"
 
 describe("RelayPledge", function () {
   let exposedRelayPledge: ExposedRelayPledge;
+  let relayPledge: RelayPledge;
   let contractInterface: e.ethers.utils.Interface;
   let server: e.Signer;
   let poster: e.Signer;
@@ -19,13 +19,53 @@ describe("RelayPledge", function () {
     const pledge = await new Pledge__factory(signers[0]).deploy();
     const pledgeLibrary = {"contracts/Pledge/Pledge.sol:Pledge": pledge.address}
 
+    relayPledge = await new RelayPledge__factory(pledgeLibrary, signers[0]).deploy(abiHack.address);
     exposedRelayPledge = await new ExposedRelayPledge__factory(pledgeLibrary, signers[0]).deploy(abiHack.address);
     contractInterface = new ethers.utils.Interface(contract.abi);
 
     server = signers[1];
     poster = signers[2];
     reader = signers[3];
-  }) 
+  })
+
+  describe("Pledge Broken", () => {
+    it("Keeps pledge intact for identical withheld/relayed", async () => {
+      let storeRequest = await newReceipt(
+        server,
+        await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 1),
+        ethers.utils.toUtf8Bytes(""), // server response to store is irrevelant aside from signature
+      )
+
+      expect(await relayPledge.isBroken(
+        [
+          storeRequest,
+          await newReceipt(
+            server,
+            await newRequest(
+              reader,
+              "find",
+              new findRequest(1, "", await poster.getAddress()).encodeAsBytes(),
+              2,
+            ),
+            storeRequest,
+          )
+        ],
+        await server.getAddress(),
+      ))
+    })
+
+    it("Keeps pledge intact for earlier relayed than withheld (if relayed after request bounds)", async () => {
+
+    })
+
+    it("Breaks pledge for withheld is before request bounds", async () => {
+
+    })
+
+    it("Breaks pledge for earlier withheld than relayed", async () => {
+
+    })
+  })
 
   describe("Validate Receipts", () => {
     async function receipts(fr?: e.ethers.BytesLike) {
