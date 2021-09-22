@@ -23,7 +23,7 @@ library Pledge {
 
     function requireValidServerSignature(Receipt memory resp, address signer) public pure {
         bytes32 hash = keccak256(abi.encode(resp.request, resp.response));
-        require(hash.toEthSignedMessageHash().recover(resp.signature) == signer, "Signature must be valid");
+        require(hash.toEthSignedMessageHash().recover(resp.signature) == signer, "Server signature must be valid");
     }
 
     function validUserSignature(Request memory rq) public pure returns (bool) {
