@@ -134,27 +134,55 @@ describe("RelayPledge", function () {
   })
 
   describe("Validate Receipts", () => {
+    async function validReceipts() {
+      return [
+        await newReceipt(
+          server,
+          await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 1),
+          ethers.utils.toUtf8Bytes("junk (we don't care how the server responded for this test)"),
+        ),
+        await newReceipt(
+          server,
+          await newRequest(
+            reader,
+            "find",
+            new findRequest(1, "", await poster.getAddress()).encodeAsBytes(),
+            2,
+          ),
+          ethers.utils.toUtf8Bytes("junk (we don't care how the server responded for this test)"),
+        )
+      ]
+    }
+
     it("Allows valid receipts", async () => {
       expect(async () => {await exposedRelayPledge._validateReceipts(
-        [
-          await newReceipt(
-            server,
-            await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 1),
-            ethers.utils.toUtf8Bytes("junk (we don't care how the server responded for this test)"),
-          ),
-          await newReceipt(
-            server,
-            await newRequest(
-              reader,
-              "find",
-              new findRequest(1, "", await poster.getAddress()).encodeAsBytes(),
-              2,
-            ),
-            ethers.utils.toUtf8Bytes("junk (we don't care how the server responded for this test)"),
-          )
-        ],
+        await validReceipts(),
         await server.getAddress(),
       )}).not.to.throw()
+    })
+
+    it("Rejects invalid meta fields", async () => {
+      let wrongStore = await validReceipts()
+      wrongStore[0].request.meta = ethers.utils.toUtf8Bytes("wrong")
+      await expect(exposedRelayPledge._validateReceipts(
+        await wrongStore,
+        await server.getAddress(),
+      )).to.be.revertedWith("First request must be a store request")
+
+      let wrongFind = await validReceipts()
+      wrongFind[1].request.meta = ethers.utils.toUtf8Bytes("wrong")
+      await expect(exposedRelayPledge._validateReceipts(
+        await wrongFind,
+        await server.getAddress(),
+      )).to.be.revertedWith("Second request must be a find request")
+
+      let wrongOrder = await validReceipts()
+      wrongOrder[0].request.meta = ethers.utils.toUtf8Bytes("find")
+      wrongOrder[1].request.meta = ethers.utils.toUtf8Bytes("store")
+      await expect(exposedRelayPledge._validateReceipts(
+        await wrongOrder,
+        await server.getAddress(),
+      )).to.be.revertedWith("First request must be a store request")
     })
   })
 });
