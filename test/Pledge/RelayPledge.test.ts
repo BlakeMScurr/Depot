@@ -30,7 +30,7 @@ describe("RelayPledge", function () {
 
   describe("Pledge Broken", () => {
     it("Keeps pledge intact for identical withheld/relayed", async () => {
-      let storeRequest = await newReceipt(
+      let storeReceipt = await newReceipt(
         server,
         await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 1),
         ethers.utils.toUtf8Bytes(""), // server response to store is irrevelant aside from signature
@@ -38,7 +38,7 @@ describe("RelayPledge", function () {
 
       expect(await relayPledge.isBroken(
         [
-          storeRequest,
+          storeReceipt,
           await newReceipt(
             server,
             await newRequest(
@@ -47,23 +47,80 @@ describe("RelayPledge", function () {
               new findRequest(1, "", await poster.getAddress()).encodeAsBytes(),
               2,
             ),
-            storeRequest,
+            storeReceipt.request.encodeAsBytes(),
           )
         ],
         await server.getAddress(),
-      ))
+      )).to.equal(false);
     })
 
     it("Keeps pledge intact for earlier relayed than withheld (if relayed after request bounds)", async () => {
-
+      expect(await relayPledge.isBroken(
+        [
+          await newReceipt(
+            server,
+            await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 2), // withheld
+            ethers.utils.toUtf8Bytes(""),
+          ),
+          await newReceipt(
+            server,
+            await newRequest(
+              reader,
+              "find",
+              new findRequest(1, "", await poster.getAddress()).encodeAsBytes(), // requested
+              2,
+            ),
+            (await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 1)).encodeAsBytes(), // relayed
+          )
+        ],
+        await server.getAddress(),
+      )).to.equal(false);
     })
 
-    it("Breaks pledge for withheld is before request bounds", async () => {
-
+    it("Breaks pledge for relayed is before request bounds", async () => {
+      expect(await relayPledge.isBroken(
+        [
+          await newReceipt(
+            server,
+            await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 1), // withheld
+            ethers.utils.toUtf8Bytes(""),
+          ),
+          await newReceipt(
+            server,
+            await newRequest(
+              reader,
+              "find",
+              new findRequest(1, "", await poster.getAddress()).encodeAsBytes(), // requested
+              2,
+            ),
+            (await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 0)).encodeAsBytes(), // relayed
+          )
+        ],
+        await server.getAddress(),
+      )).to.equal(true);
     })
 
     it("Breaks pledge for earlier withheld than relayed", async () => {
-
+      expect(await relayPledge.isBroken(
+        [
+          await newReceipt(
+            server,
+            await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 2), // withheld
+            ethers.utils.toUtf8Bytes(""),
+          ),
+          await newReceipt(
+            server,
+            await newRequest(
+              reader,
+              "find",
+              new findRequest(1, "", await poster.getAddress()).encodeAsBytes(), // requested
+              2,
+            ),
+            (await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 3)).encodeAsBytes(), // relayed
+          )
+        ],
+        await server.getAddress(),
+      )).to.equal(true);
     })
   })
 
