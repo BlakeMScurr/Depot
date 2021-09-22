@@ -1,5 +1,37 @@
 import * as ethers from "ethers";
 
+export class Receipt {
+  request: Request;
+  response: ethers.BytesLike;
+  signature: ethers.BytesLike;
+
+
+  constructor(request: Request, response: ethers.BytesLike, signature: ethers.BytesLike) {
+    this.request = request;
+    this.response = response;
+    this.signature = signature;
+  }
+}
+
+export async function newReceipt(server: ethers.Signer, request: Request, response: ethers.BytesLike):Promise<Receipt> {
+  let encoded = ethers.utils.defaultAbiCoder.encode(
+    ["tuple(bytes, bytes, address, uint256, bytes)", "bytes"],
+    [[
+      request.meta,
+      request.message,
+      request.user,
+      request.blockNumber,
+      request.signature,
+    ], response])
+  let hashed = ethers.utils.keccak256(encoded);
+  let hashBinary = ethers.utils.arrayify(hashed);
+  let signature = await server.signMessage(hashBinary);
+
+  return new Receipt(request, response, signature)
+}
+
+
+
 export class Request {
   meta: ethers.BytesLike;
   message: ethers.BytesLike;
@@ -33,17 +65,16 @@ export class Request {
   }
 }
 
-export async function newRequest(signer: ethers.Signer, meta: string, message: string, blockNumber: number):Promise<Request> {
+export async function newRequest(signer: ethers.Signer, meta: string, message: ethers.BytesLike, blockNumber: number):Promise<Request> {
   let user = await signer.getAddress();
   let _meta = ethers.utils.toUtf8Bytes(meta);
-  let _message = ethers.utils.toUtf8Bytes(message);
 
-  let encoded = ethers.utils.defaultAbiCoder.encode(["bytes", "bytes", "address", "uint256"], [_meta, _message, user, blockNumber])
+  let encoded = ethers.utils.defaultAbiCoder.encode(["bytes", "bytes", "address", "uint256"], [_meta, message, user, blockNumber])
   let hashed = ethers.utils.keccak256(encoded);
   let hashBinary = ethers.utils.arrayify(hashed);
   let signature = await signer.signMessage(hashBinary);
 
-  return new Request(_meta, _message, user, blockNumber, signature)
+  return new Request(_meta, message, user, blockNumber, signature)
 }
 
 export class findRequest {
@@ -55,5 +86,20 @@ export class findRequest {
     this.fromBlockNumber = fromBlockNumber;
     this.fromMessage = ethers.utils.toUtf8Bytes(fromMessage);
     this.byUser = byUser;
+  }
+
+  encodeAsBytes() {
+    return ethers.utils.defaultAbiCoder.encode(
+      [
+        "tuple(uint256, bytes, address)",
+      ],
+      [
+        [
+          this.fromBlockNumber,
+          this.fromMessage,
+          this.byUser,
+        ]
+      ]
+    ) 
   }
 }

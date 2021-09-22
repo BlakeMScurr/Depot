@@ -3,7 +3,8 @@ import { ethers } from "hardhat";
 import * as e from "ethers";
 import { ExposedRelayPledge__factory, ABIHack__factory, Pledge__factory, ExposedRelayPledge } from "../../typechain"
 import * as contract from "../../artifacts/contracts/Pledge/Test.sol/ExposedRelayPledge.json";
-import { Request, newRequest, findRequest } from "../../offchain/Requests"
+import { Request, newRequest, findRequest, Receipt, newReceipt } from "../../offchain/Requests"
+import { SSL_OP_TLS_BLOCK_PADDING_BUG } from "constants";
 
 describe("RelayPledge", function () {
   let exposedRelayPledge: ExposedRelayPledge;
@@ -55,12 +56,12 @@ describe("RelayPledge", function () {
 
   it("Finds earlier messages", async () => {
     let orderedRequests = [
-      await newRequest(poster, "store", "01", 1),
-      await newRequest(poster, "store", "01", 2),
-      await newRequest(poster, "store", "11", 2),
-      await newRequest(poster, "store", "0000", 2),
-      await newRequest(poster, "store", "00", 3),
-      await newRequest(poster, "store", "", 4),
+      await newRequest(poster, "store", ethers.utils.toUtf8Bytes("01"), 1),
+      await newRequest(poster, "store", ethers.utils.toUtf8Bytes("01"), 2),
+      await newRequest(poster, "store", ethers.utils.toUtf8Bytes("11"), 2),
+      await newRequest(poster, "store", ethers.utils.toUtf8Bytes("0000"), 2),
+      await newRequest(poster, "store", ethers.utils.toUtf8Bytes("00"), 3),
+      await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 4),
     ];
 
     for (var i = 0; i < orderedRequests.length; i++) {
@@ -74,7 +75,7 @@ describe("RelayPledge", function () {
     }
   })
 
-  describe("Valid Relay", () => {
+  describe.skip("Valid Relay", () => {
     it("Allows later relays", async () => {
       let relayed = await newRequest(poster, "store", "1", 2)
       let find = new findRequest(1, "0", await poster.getAddress())
@@ -129,6 +130,31 @@ describe("RelayPledge", function () {
       let relayed = await newRequest(poster, "store", "0", 2)
       let find = new findRequest(2, "1", await poster.getAddress())
       expect((await exposedRelayPledge._validRelay(find, relayed.encodeAsBytes()))[1]).to.equal(false);
+    })
+  })
+
+  describe("Validate Receipts", () => {
+    it("Allows valid receipts", async () => {
+      expect(async () => {await exposedRelayPledge._validateReceipts(
+        [
+          await newReceipt(
+            server,
+            await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 1),
+            ethers.utils.toUtf8Bytes("junk (we don't care how the server responded for this test)"),
+          ),
+          await newReceipt(
+            server,
+            await newRequest(
+              reader,
+              "find",
+              new findRequest(1, "", await poster.getAddress()).encodeAsBytes(),
+              2,
+            ),
+            ethers.utils.toUtf8Bytes("junk (we don't care how the server responded for this test)"),
+          )
+        ],
+        await server.getAddress(),
+      )}).not.to.throw()
     })
   })
 });

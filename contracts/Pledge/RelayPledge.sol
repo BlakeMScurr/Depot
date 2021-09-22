@@ -42,7 +42,7 @@ contract RelayPledge {
     }
 
     // Requires that we have a wellformed store and find receipt, and that the find receipt applies to the store receipt.
-    function validateReceipts(Pledge.Receipt[] memory receipts, address server) internal pure returns (FindRequest memory, bytes memory, Pledge.Request memory) {
+    function validateReceipts(Pledge.Receipt[] memory receipts, address server) internal view returns (FindRequest memory, bytes memory, Pledge.Request memory) {
         // Validate receipt types and signatures
         Pledge.Receipt memory storeReceipt = receipts[0];
         Pledge.Receipt memory findReceipt = receipts[1];
