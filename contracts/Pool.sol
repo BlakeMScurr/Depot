@@ -7,7 +7,7 @@ import "./Pledge/Pledge.sol";
 contract Pool {
     event Receipt(bytes indexed meta, bytes indexed message, address indexed user, uint256 blockNumber, bytes signature);
 
-    mapping(bytes32 => Pledge.Request) requests;
+    mapping(bytes32 => Pledge.Request) inbox;
     address serverEthAddress;
     uint256 leeway;
 
@@ -19,18 +19,18 @@ contract Pool {
     function request(Pledge.Request memory rq) public {
         require(Pledge.validUserSignature(rq), "Invalid signature");
         require(rq.blockNumber >= block.number, "Enforcement period cannot start in the past");
-        requests[keccak256(abi.encode(rq))] = rq;
+        inbox[keccak256(abi.encode(rq))] = rq;
     }
 
     function respond(bytes memory signature, bytes memory response, bytes32 requestHash) public {
-        Pledge.Request memory rq = requests[requestHash];
+        Pledge.Request memory rq = inbox[requestHash];
         Pledge.Receipt memory signed = Pledge.Receipt(rq, response, signature);
         Pledge.requireValidServerSignature(signed, serverEthAddress);
         emit Receipt(rq.meta, rq.message, rq.user, rq.blockNumber, signature);
-        delete requests[requestHash];
+        delete inbox[requestHash];
     }
 
     function late(bytes32 requestHash) public view returns (bool) {
-        return requests[requestHash].blockNumber + leeway < block.number;
+        return inbox[requestHash].blockNumber + leeway < block.number;
     }
 }

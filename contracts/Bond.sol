@@ -5,9 +5,7 @@ import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./Pool.sol";
 
-// TODO: look into various vault standards etc
-// TODO: is vault the right word? Perhaps guarantee?
-contract LivelinessVault {
+contract Bond {
     Pool pool;
     address serverEthAddress;
     IERC20 erc20;
