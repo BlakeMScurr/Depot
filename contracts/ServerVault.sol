@@ -41,7 +41,7 @@ contract LivelinessVault {
         if (pool.late(requestHash)) {
             uint256 amountLocked = erc20.balanceOf(address(this));
             erc20.transfer(msg.sender, amountLocked / reward);
-            erc20.transfer(msg.sender, amountLocked / amountSlashed);
+            erc20.transfer(address(0), amountLocked / amountSlashed);
         }
     }
 }

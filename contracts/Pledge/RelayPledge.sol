@@ -37,12 +37,12 @@ contract RelayPledge {
             return true;
         }
 
-        // If the withheld message was earlier than the relayed message, then the server is broken its pledge
-        return messageIsEarlier(withheld, relayed);
+        // If the relayed message was earlier than the withheld message, then the server is broken its pledge
+        return messageIsEarlier(relayed, withheld);
     }
 
     // Requires that we have a wellformed store and find receipt, and that the find receipt applies to the store receipt.
-    function validateReceipts(Pledge.Receipt[] memory receipts, address server) internal pure returns (FindRequest memory, bytes memory, Pledge.Request memory) {
+    function validateReceipts(Pledge.Receipt[] memory receipts, address server) internal view returns (FindRequest memory, bytes memory, Pledge.Request memory) {
         // Validate receipt types and signatures
         Pledge.Receipt memory storeReceipt = receipts[0];
         Pledge.Receipt memory findReceipt = receipts[1];
@@ -57,9 +57,10 @@ contract RelayPledge {
 
         // Validate applicability of find request to store request
         require(findRequest.byUser == storeReceipt.request.user, "Find and store request relate to different users");
-        require(findRequest.fromBlockNumber <= storeReceipt.request.blockNumber, "Message can't be a valid response to find request: stored before find request's start block");
+        require(findRequest.fromBlockNumber >= storeReceipt.request.blockNumber, "Message can't be a valid response to find request: stored after find request's start block");
         if (findRequest.fromBlockNumber == storeReceipt.request.blockNumber) {
-            require(compare(findRequest.fromMessage, storeReceipt.request.message) < 1, "Message can't be a valid response to find request: stored before find request's start point within the same block");
+            console.logInt(compare(findRequest.fromMessage, storeReceipt.request.message));
+            require(compare(findRequest.fromMessage, storeReceipt.request.message) >= 0, "Message can't be a valid response to find request: stored after find request's start point within the same block");
         }
 
         require(findRequest.fromBlockNumber < findReceipt.request.blockNumber, "Find requests must refer to the past, since the server can't know what might be stored in the future");
@@ -96,9 +97,9 @@ contract RelayPledge {
         }
 
         // The store request must be from the requested point or after
-        if (relayed.blockNumber < findRequest.fromBlockNumber ||
+        if (relayed.blockNumber > findRequest.fromBlockNumber ||
             (relayed.blockNumber == findRequest.fromBlockNumber &&
-            compare(relayed.message, findRequest.fromMessage) < 0)
+            compare(relayed.message, findRequest.fromMessage) > 0)
         ) {
             return (relayed, false);
         }
