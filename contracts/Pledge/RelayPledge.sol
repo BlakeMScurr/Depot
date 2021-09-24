@@ -14,6 +14,7 @@ contract RelayPledge {
         uint256 fromBlockNumber;
         bytes fromMessage;
         address byUser;
+        bytes prefix;
     }
 
     ABIHack abiHack;
@@ -57,9 +58,9 @@ contract RelayPledge {
 
         // Validate applicability of find request to store request
         require(findRequest.byUser == storeReceipt.request.user, "Find and store request relate to different users");
+        require(hasPrefix(findRequest.prefix, storeReceipt.request.message), "Message lacks the needed prefix");
         require(findRequest.fromBlockNumber >= storeReceipt.request.blockNumber, "Message can't be a valid response to find request: stored after find request's start block");
         if (findRequest.fromBlockNumber == storeReceipt.request.blockNumber) {
-            console.logInt(compare(findRequest.fromMessage, storeReceipt.request.message));
             require(compare(findRequest.fromMessage, storeReceipt.request.message) >= 0, "Message can't be a valid response to find request: stored after find request's start point within the same block");
         }
 
@@ -93,6 +94,11 @@ contract RelayPledge {
 
         // The user who created the store request must be the one requested in the find request
         if (findRequest.byUser != relayed.user) {
+            return (relayed, false);
+        }
+
+        // The message must have the prefix specified in the request
+        if (!hasPrefix(findRequest.prefix, relayed.message)) {
             return (relayed, false);
         }
 
@@ -134,5 +140,18 @@ contract RelayPledge {
         }
 
         return 0;
+    }
+
+    function hasPrefix(bytes memory prefix, bytes memory str) internal pure returns (bool) {
+        if (str.length < prefix.length) {
+            return false;
+        }
+
+        for (uint256 i = 0; i < prefix.length; i++) {
+            if (str[i] != prefix[i]) {
+                return false;
+            }
+        }
+        return true;
     }
 }
