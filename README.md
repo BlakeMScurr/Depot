@@ -16,7 +16,7 @@ This paper describes the a simple stewarded chat server built on Ethereum, but t
 
 ## Centralised
 
-- Accrual of power - Donald Trump was destroyed by Twitter and Facebook.
+- Accrual of power - POTUS was destroyed by Twitter and Facebook.
 - Control of narrative - Banning, shadow banning, algorithm manipulation.
 - Reduction of innovation - UI monopoly.
 - Addiction Optimisation - Users stuck with addictive UI and reccomenders. Can't, for example, use sense making optimised reccomenders. 
