@@ -2,9 +2,9 @@
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
-import "./Pledge/Pledge.sol";
+import "./Pledge.sol";
 
-contract Pool {
+contract LivelinessPledge {
     event Receipt(bytes indexed meta, bytes indexed message, address indexed user, uint256 blockNumber, bytes signature);
 
     mapping(bytes32 => Pledge.Request) inbox;
@@ -30,7 +30,7 @@ contract Pool {
         delete inbox[requestHash];
     }
 
-    function late(bytes32 requestHash) public view returns (bool) {
-        return inbox[requestHash].blockNumber + leeway < block.number;
+    function isBroken(Pledge.Receipt[] memory rqs) public view returns (bool) {
+        return inbox[keccak256(abi.encode(rqs[0].request))].blockNumber + leeway < block.number;
     }
 }

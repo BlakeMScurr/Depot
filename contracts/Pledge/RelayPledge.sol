@@ -18,17 +18,19 @@ contract RelayPledge {
     }
 
     ABIHack abiHack;
-    constructor(address _abiHack) {
+    address server;
+    constructor(address _abiHack, address _server) {
         abiHack = ABIHack(_abiHack);
+        server = _server;
     }
 
     // Judges whether the server broke its pledge to relay messages.
-    function isBroken(Pledge.Receipt[] memory receipts, address server) external view returns (bool) {
+    function isBroken(Pledge.Receipt[] memory receipts) external view returns (bool) {
         // We check that the alledgedly withheld message was stored and requested
         FindRequest memory findRequest;
         bytes memory findResponse;
         Pledge.Request memory withheld;
-        (findRequest, findResponse, withheld) = validateReceipts(receipts, server);
+        (findRequest, findResponse, withheld) = validateReceipts(receipts);
 
         // We check that the server relayed a genuine message when asked
         bool valid;
@@ -43,7 +45,7 @@ contract RelayPledge {
     }
 
     // Requires that we have a wellformed store and find receipt, and that the find receipt applies to the store receipt.
-    function validateReceipts(Pledge.Receipt[] memory receipts, address server) internal view returns (FindRequest memory, bytes memory, Pledge.Request memory) {
+    function validateReceipts(Pledge.Receipt[] memory receipts) internal view returns (FindRequest memory, bytes memory, Pledge.Request memory) {
         // Validate receipt types and signatures
         Pledge.Receipt memory storeReceipt = receipts[0];
         Pledge.Receipt memory findReceipt = receipts[1];

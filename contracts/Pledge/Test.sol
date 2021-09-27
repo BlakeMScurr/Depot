@@ -5,10 +5,10 @@ pragma solidity ^0.8.0;
 import "./RelayPledge.sol";
 
 contract ExposedRelayPledge is RelayPledge {
-    constructor(address _abiHack) RelayPledge(_abiHack) {}
+    constructor(address _abiHack, address _server) RelayPledge(_abiHack, _server) {}
 
-    function _validateReceipts(Pledge.Receipt[] memory receipts, address server) public view returns (FindRequest memory, bytes memory, Pledge.Request memory) {
-        return validateReceipts(receipts, server);
+    function _validateReceipts(Pledge.Receipt[] memory receipts) public view returns (FindRequest memory, bytes memory, Pledge.Request memory) {
+        return validateReceipts(receipts);
     }
     function _validRelay(FindRequest memory findRequest, bytes memory findResponse) public view returns (Pledge.Request memory, bool) {
         return validRelay(findRequest, findResponse);

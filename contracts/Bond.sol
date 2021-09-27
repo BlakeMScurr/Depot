@@ -3,10 +3,10 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./Pool.sol";
+import "./Pledge/LivelinessPledge.sol";
 
 contract Bond {
-    Pool pool;
+    LivelinessPledge lp;
     address serverEthAddress;
     IERC20 erc20;
     uint256 lastDrawdown;
@@ -16,8 +16,8 @@ contract Bond {
     // TODO: consider whether this is the appropriate reward, as the server can always slash itself to get instant liquidity. How much liquidity could it get by each strategy? Is it necessary to award the fisher?
     uint256 constant reward = 100; // The user who realised the server is late gets a 100th of the locked funds
 
-    constructor(address _pool, address _serverEthAddress, address _erc20) {
-        pool = Pool(_pool);
+    constructor(address _lp, address _serverEthAddress, address _erc20) {
+        lp = LivelinessPledge(_lp);
         serverEthAddress = _serverEthAddress;
         erc20 = IERC20(_erc20);
         lastDrawdown = block.number;
@@ -32,11 +32,11 @@ contract Bond {
         require(amount < erc20.balanceOf(address(this)) / monthlyDrawdown, "You can only draw funds less than our monthly drawdown");        
         require(lastDrawdown + month < block.number, "You must wait a month to withdraw your monthly allowance");
         lastDrawdown = block.number;
-        erc20.transfer(serverEthAddress, amount);
+        erc20.transfer(serverEthAddress, amount);   
     }
 
-    function slash(bytes32 requestHash) public {
-        if (pool.late(requestHash)) {
+    function slash(Pledge.Receipt[] memory rqs) public {
+        if (lp.isBroken(rqs)) {
             uint256 amountLocked = erc20.balanceOf(address(this));
             erc20.transfer(msg.sender, amountLocked / reward);
             erc20.transfer(address(0), amountLocked / amountSlashed);
