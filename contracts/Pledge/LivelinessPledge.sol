@@ -30,7 +30,8 @@ contract LivelinessPledge {
         delete inbox[requestHash];
     }
 
-    function isBroken(Pledge.Receipt[] memory rqs) public view returns (bool) {
-        return inbox[keccak256(abi.encode(rqs[0].request))].blockNumber + leeway < block.number;
+    function isBroken(Pledge.Receipt[] memory receipts) public view returns (bool) {
+        require(receipts.length < 2, "Extra requests enable replay attacks");
+        return inbox[keccak256(abi.encode(receipts[0].request))].blockNumber + leeway < block.number;
     }
 }

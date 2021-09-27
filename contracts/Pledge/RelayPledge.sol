@@ -26,6 +26,8 @@ contract RelayPledge {
 
     // Judges whether the server broke its pledge to relay messages.
     function isBroken(Pledge.Receipt[] memory receipts) external view returns (bool) {
+        require(receipts.length < 3, "Extra requests enable replay attacks");
+
         // We check that the alledgedly withheld message was stored and requested
         FindRequest memory findRequest;
         bytes memory findResponse;

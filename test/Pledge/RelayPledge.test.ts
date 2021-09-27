@@ -2,7 +2,6 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import * as e from "ethers";
 import { ExposedRelayPledge__factory, RelayPledge__factory, ABIHack__factory, Pledge__factory, ExposedRelayPledge, RelayPledge } from "../../typechain"
-import * as contract from "../../artifacts/contracts/Pledge/Test.sol/ExposedRelayPledge.json";
 import { newRequest, findRequest, newReceipt, Request } from "../../offchain/Requests"
 
 describe("RelayPledge", function () {
@@ -19,14 +18,10 @@ describe("RelayPledge", function () {
     reader = signers[3];
     serverAddress = await server.getAddress();
 
-    console.log("2")
     const abiHack = await new ABIHack__factory(signers[0]).deploy();
-    console.log("3")
 
     const pledge = await new Pledge__factory(signers[0]).deploy();
-    console.log("4")
     const pledgeLibrary = {"contracts/Pledge/Pledge.sol:Pledge": pledge.address}
-    console.log("5")
 
     relayPledge = await new RelayPledge__factory(pledgeLibrary, signers[0]).deploy(abiHack.address, serverAddress);
     exposedRelayPledge = await new ExposedRelayPledge__factory(pledgeLibrary, signers[0]).deploy(abiHack.address, serverAddress);
