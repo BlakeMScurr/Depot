@@ -7,8 +7,8 @@ import "./RelayPledge.sol";
 contract ExposedRelayPledge is RelayPledge {
     constructor(address _abiHack, address _server) RelayPledge(_abiHack, _server) {}
 
-    function _validateReceipts(Pledge.Receipt[] memory receipts) public view returns (FindRequest memory, bytes memory, Pledge.Request memory) {
-        return validateReceipts(receipts);
+    function _validateReceipts(Pledge.Receipt memory storeReceipt, Pledge.Receipt memory findReceipt) public view returns (FindRequest memory, bytes memory, Pledge.Request memory) {
+        return validateReceipts(storeReceipt, findReceipt);
     }
     function _validRelay(FindRequest memory findRequest, bytes memory findResponse) public view returns (Pledge.Request memory, bool) {
         return validRelay(findRequest, findResponse);

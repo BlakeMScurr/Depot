@@ -71,130 +71,137 @@ describe("RelayPledge", function () {
 
     async function isBrokenTest(withheld: Request, requested: findRequest, relayed: Request, value: boolean) {
       expect(await relayPledge.isBroken(
-        [
-          await newReceipt(
-            server,
-            withheld,
-            ethers.utils.toUtf8Bytes(""), // server response to store is irrevelant - signature is sufficient
-          ),
-          await newReceipt(
-            server,
-            await newRequest(
-              reader,
-              "find",
-              requested.encodeAsBytes(),
-              10,
-            ),
-            relayed.encodeAsBytes(),
-          )
-        ],
-      )).to.equal(value);
-    }
-  })
-
-  describe("Validate Receipts", () => {
-    async function receipts(fr?: e.ethers.BytesLike) {
-      if (!fr) fr = new findRequest(1, "1", await poster.getAddress()).encodeAsBytes()
-      return [
         await newReceipt(
           server,
-          await newRequest(poster, "store", ethers.utils.toUtf8Bytes("1"), 1),
-          ethers.utils.toUtf8Bytes("junk (we don't care how the server responded for this test)"),
+          withheld,
+          ethers.utils.toUtf8Bytes(""), // server response to store is irrevelant - signature is sufficient
         ),
         await newReceipt(
           server,
           await newRequest(
             reader,
             "find",
-            fr,
-            2,
+            requested.encodeAsBytes(),
+            10,
           ),
-          ethers.utils.toUtf8Bytes("junk (we don't care how the server responded for this test)"),
+          relayed.encodeAsBytes(),
         )
-      ]
+      )).to.equal(value);
+    }
+  })
+
+  describe("Validate Receipts", () => {
+    async function storeReceipt() {
+      return await newReceipt(
+        server,
+        await newRequest(poster, "store", ethers.utils.toUtf8Bytes("1"), 1),
+        ethers.utils.toUtf8Bytes("junk (we don't care how the server responded for this test)"),
+      )
+    }
+
+    async function findReceipt(fr?: e.ethers.BytesLike) {
+      if (!fr) fr = new findRequest(1, "1", await poster.getAddress()).encodeAsBytes()
+      return await newReceipt(
+        server,
+        await newRequest(
+          reader,
+          "find",
+          fr,
+          2,
+        ),
+        ethers.utils.toUtf8Bytes("junk (we don't care how the server responded for this test)"),
+      )
     }
 
     it("Allows valid receipts", async () => {
       expect(async () => {await exposedRelayPledge._validateReceipts(
-        await receipts(),
+        await storeReceipt(),
+        await findReceipt(),
       )}).not.to.throw()
     })
 
     it("Allows valid prefixes", async () => {
       expect(async () => {await exposedRelayPledge._validateReceipts(
-        await receipts(new findRequest(1, "1", await poster.getAddress(), ethers.utils.toUtf8Bytes("1")).encodeAsBytes()), // "1" utf8 encoded is the prefix and the whole message
+        await storeReceipt(),
+        await findReceipt(new findRequest(1, "1", await poster.getAddress(), ethers.utils.toUtf8Bytes("1")).encodeAsBytes()), // "1" utf8 encoded is the prefix and the whole message
       )}).not.to.throw()
     })
 
-
-    it("Rejects invalid args", async () => {
-      await expect(exposedRelayPledge._validateReceipts(
-        [(await receipts())[0]],
-      )).to.be.revertedWith("")
-    })
-
     it("Rejects invalid meta fields", async () => {
-      let wrongStore = await receipts()
-      wrongStore[0].request.meta = ethers.utils.toUtf8Bytes("wrong")
+      let wrongStore = await storeReceipt()
+      wrongStore.request.meta = ethers.utils.toUtf8Bytes("wrong")
       await expect(exposedRelayPledge._validateReceipts(
         await wrongStore,
+        await findReceipt(),
       )).to.be.revertedWith("First request must be a store request")
 
-      let wrongFind = await receipts()
-      wrongFind[1].request.meta = ethers.utils.toUtf8Bytes("wrong")
+      let wrongFind = await findReceipt()
+      wrongFind.request.meta = ethers.utils.toUtf8Bytes("wrong")
       await expect(exposedRelayPledge._validateReceipts(
+        await storeReceipt(),
         await wrongFind,
       )).to.be.revertedWith("Second request must be a find request")
 
-      let wrongOrder = await receipts()
-      wrongOrder[0].request.meta = ethers.utils.toUtf8Bytes("find")
-      wrongOrder[1].request.meta = ethers.utils.toUtf8Bytes("store")
+      // wrong order
       await expect(exposedRelayPledge._validateReceipts(
-        await wrongOrder,
+        await findReceipt(),
+        await storeReceipt(),
       )).to.be.revertedWith("First request must be a store request")
     })
 
     it("Rejects invalid server signatures", async () => {
-      let siggySwap = await receipts()
+      let store = await storeReceipt()
+      let find = await findReceipt()
+
       // test the signature validation on the store receipt 
-      let tmp = siggySwap[0].signature
-      siggySwap[0].signature = siggySwap[1].signature
+      let tmp = store.signature
+      store.signature = find.signature
 
       await expect(exposedRelayPledge._validateReceipts(
-        siggySwap,
+        store,
+        find,
       )).to.be.revertedWith("Server signature must be valid")
 
       // test signature validation on the find receipt
-      siggySwap[0].signature = tmp
-      siggySwap[1].signature = tmp
+      store.signature = tmp
+      find.signature = tmp
 
       await expect(exposedRelayPledge._validateReceipts(
-        siggySwap,
+        store,
+        find,
       )).to.be.revertedWith("Server signature must be valid")
     })
 
     it("Rejects ill formated find requests", async () => {
-      let badFinder = await receipts(ethers.utils.toUtf8Bytes("0x"))
-      await expect(exposedRelayPledge._validateReceipts(badFinder)).to.be.revertedWith("") // TODO: assert that this is due to ABI decoding - seems like hardhat isn't able to pick up on that kind of error
+      await expect(exposedRelayPledge._validateReceipts(
+        await storeReceipt(),
+        await findReceipt(ethers.utils.toUtf8Bytes("0x"))
+      )).to.be.revertedWith("") // TODO: assert that this is due to ABI decoding - seems like hardhat isn't able to pick up on that kind of error
     })
 
     it("Rejects find requests for irrelevant users", async () => {
-      let badFinder = await receipts(new findRequest(1, "", await reader.getAddress()).encodeAsBytes())
-      await expect(exposedRelayPledge._validateReceipts(badFinder)).to.be.revertedWith("Find and store request relate to different users")
+      await expect(exposedRelayPledge._validateReceipts(
+        await storeReceipt(),
+        await findReceipt(new findRequest(1, "", await reader.getAddress()).encodeAsBytes())
+      )).to.be.revertedWith("Find and store request relate to different users")
     })
 
     it("Rejects store requests from later blocks", async () => {
-      let badFinder = await receipts(new findRequest(0, "", await poster.getAddress()).encodeAsBytes())
-      await expect(exposedRelayPledge._validateReceipts(badFinder)).to.be.revertedWith("Message can't be a valid response to find request: stored after find request's start block")
+      await expect(exposedRelayPledge._validateReceipts(
+        await storeReceipt(),
+        await findReceipt(new findRequest(0, "", await poster.getAddress()).encodeAsBytes()),
+      )).to.be.revertedWith("Message can't be a valid response to find request: stored after find request's start block")
     })
 
     it("Rejects store requests from later in the same block", async () => {
-      let badFinder = await receipts(new findRequest(1, "0", await poster.getAddress()).encodeAsBytes())
-      await expect(exposedRelayPledge._validateReceipts(badFinder)).to.be.revertedWith("Message can't be a valid response to find request: stored after find request's start point within the same block")
+      await expect(exposedRelayPledge._validateReceipts(
+        await storeReceipt(),
+        await findReceipt(new findRequest(1, "0", await poster.getAddress()).encodeAsBytes()),
+      )).to.be.revertedWith("Message can't be a valid response to find request: stored after find request's start point within the same block")
     })
 
     it("Rejects find requests referring to the future", async () => {
-      let store = (await receipts())[0]
+      let store = await storeReceipt()
       let find = await newReceipt(
         server,
         await newRequest(
@@ -206,13 +213,16 @@ describe("RelayPledge", function () {
         ethers.utils.toUtf8Bytes("junk (we don't care how the server responded for this test)"),
       )
       await expect(exposedRelayPledge._validateReceipts(
-        [store, find],
+        store,
+        find,
       )).to.be.revertedWith("Find requests must refer to the past, since the server can't know what might be stored in the future")
     })
 
     it("Rejects messages without the specified prefix", async () => {
-      let badFinder = await receipts(new findRequest(1, "0", await poster.getAddress(), ethers.utils.toUtf8Bytes("someprefix")).encodeAsBytes())
-      await expect(exposedRelayPledge._validateReceipts(badFinder)).to.be.revertedWith("Message lacks the needed prefix")
+      await expect(exposedRelayPledge._validateReceipts(
+        await storeReceipt(),
+        await findReceipt(new findRequest(1, "0", await poster.getAddress(), ethers.utils.toUtf8Bytes("someprefix")).encodeAsBytes()),
+      )).to.be.revertedWith("Message lacks the needed prefix")
     })
   })
 
