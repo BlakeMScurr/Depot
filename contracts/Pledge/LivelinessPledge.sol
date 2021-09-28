@@ -8,11 +8,11 @@ contract LivelinessPledge {
     event Receipt(bytes indexed meta, bytes indexed message, address indexed user, uint256 blockNumber, bytes signature);
 
     mapping(bytes32 => Pledge.Request) inbox;
-    address serverSigningAccount;
+    address serverSigner;
     uint256 leeway;
 
-    constructor(address _serverSigningAccount, uint256 _leeway) {
-        serverSigningAccount = _serverSigningAccount;
+    constructor(address _serverSigner, uint256 _leeway) {
+        serverSigner = _serverSigner;
         leeway = _leeway;
     }
 
@@ -25,7 +25,7 @@ contract LivelinessPledge {
     function respond(bytes memory signature, bytes memory response, bytes32 requestHash) public {
         Pledge.Request memory rq = inbox[requestHash];
         Pledge.Receipt memory signed = Pledge.Receipt(rq, response, signature);
-        Pledge.requireValidServerSignature(signed, serverSigningAccount);
+        Pledge.requireValidServerSignature(signed, serverSigner);
         emit Receipt(rq.meta, rq.message, rq.user, rq.blockNumber, signature);
         delete inbox[requestHash];
     }
