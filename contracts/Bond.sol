@@ -3,22 +3,21 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./Pledge/LivelinessPledge.sol";
 import "./Pledge/IPledge.sol";
 
 /**
 * Bond locks up the server's token, slashes it if the server misbehaves, and gives the server a monthly income.
 */
-contract Bond {
-    address serverEthAddress;
+contract Bond is Ownable {
     IERC20 erc20;
     uint256 lastDrawdown;
 
     committedPledge[] pledges; // pledges the server has committed
     mapping(bytes32 => bool) perjuries; // cases of broken pledges
 
-    constructor(address _serverEthAddress, address _erc20) {
-        serverEthAddress = _serverEthAddress;
+    constructor(address _erc20) {
         erc20 = IERC20(_erc20);
         lastDrawdown = block.number;
     }
@@ -33,19 +32,17 @@ contract Bond {
     /**
     * Every month the server can optionally draw a 200th of the locked funds (~%5.8 per year)
     */
-    function draw(uint256 amount) public {
-        require(msg.sender == serverEthAddress, "Only the server can unlock funds");
+    function draw(uint256 amount) public onlyOwner {
         require(amount < erc20.balanceOf(address(this)) / 200, "You can only draw funds less than our monthly drawdown");        
         require(lastDrawdown + 172800 < block.number, "You must wait a month to withdraw your monthly allowance"); // blocks/month = 4 * 60 * 24 * 30 = 172800
         lastDrawdown = block.number;
-        erc20.transfer(serverEthAddress, amount);   
+        erc20.transfer(this.owner(), amount);
     }
 
     /**
     * The server can freely make pledges on the same bond, it doesn't affect the existing pledges
     */
-    function addPledge(committedPledge memory p) public {
-        require(msg.sender == serverEthAddress, "Only the server add pledges");
+    function addPledge(committedPledge memory p) public onlyOwner {
         pledges.push(p);
     }
 
