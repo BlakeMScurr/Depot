@@ -37,3 +37,7 @@ Note, since these would be external contract calls to arbitrary unvetted contrac
 ## Malicious Silo
 
 With business logic contracts, no one can *force* the server to create junk data, but the server itself can decide to store junk data if it wants. It is dangerous to make a separate pledge stating that the server can't sign messages that are invalid according to their business logic contracts, since contracts are impure and a malicious developer could force the server into signing something that becomes invalid later. There may be a static analysis technique that we can use to ensure that only pure business logic contracts are enforceable.
+
+# Reccomendation and Search
+
+Reccomendation and Search algorithms are a critical part of any social media platform. This is a very complex feature, but ideally we would be able to implemt a neural network training and execution algorithms as quadratic arithmetic programs, and produce zk-snarks (or similar). These snarks would prove that a given model had been trained on all available data in the silo (optionally matching some criteria), and that the model had been faithfully executed for a given prompt/parameter.This would be a critical breakthrough in social media, as we'd finally be able to trust the reccomenders that are currently so opaque and manipulative.
