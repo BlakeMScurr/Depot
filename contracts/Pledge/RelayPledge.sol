@@ -2,13 +2,16 @@
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
-import "./IPledge.sol";
 import "./Pledge.sol";
 import "./ABIHack.sol";
 
-// A server held to this pledge will relay any messages that it is asked to store.
-// The server holds all messages for each user in order. Anyone can request a message at any point in the ordering.
-// If the server responds with the wrong message, the pledge is broken, and the server can be penalized.
+/**
+ * @title Pledge to relay any stored messages.
+ *
+ *  @dev A server held to this pledge will relay any messages that it is asked to store.
+ * The server holds all messages for each user in order. Anyone can request a message at any point in the ordering.
+ * If the server responds with the wrong message, the pledge is broken, and the server can be penalized.
+ */
 contract RelayPledge {
     struct FindRequest {
         uint256 fromBlockNumber;
