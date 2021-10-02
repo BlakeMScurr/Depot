@@ -56,7 +56,14 @@ contract RelayPledge {
         return messageIsEarlier(relayed, withheld);
     }
 
-    // Requires that we have a wellformed store and find receipt, and that the find receipt applies to the store receipt.
+    /**
+     * @dev Requires valid and applicable receipts.
+     *
+     * The receipts must be a properly formatted find and store receipt, and
+     * the withheld message from the store receipt must be applicable to the
+     * find receipt, i.e., it must be before or at the point defined by the
+     * find receipt.
+     */
     function validateReceipts(Pledge.Receipt memory storeReceipt, Pledge.Receipt memory findReceipt) internal view returns (FindRequest memory, bytes memory, Pledge.Request memory) {
         // Validate receipt types and signatures
         require(keccak256(abi.encodePacked(storeReceipt.request.meta)) == keccak256(abi.encodePacked("store")), "First request must be a store request");
@@ -81,7 +88,12 @@ contract RelayPledge {
         return (findRequest, findReceipt.response, storeReceipt.request);
     }
 
-    // Did the server respond to the find request with a valid message?
+    /**
+     * @dev Returns whether the server responded to a find request with a valid message
+     *
+     * The reponse must be a properly signed and formatted message, and it must
+     * be at/before the time specified by the request.
+     */
     function validRelay(FindRequest memory findRequest, bytes memory findResponse) internal view returns (Pledge.Request memory, bool) {
         // The response to the find request must be a well formatted store request
         // Call an external contract to catch abi decoding errors
@@ -125,7 +137,9 @@ contract RelayPledge {
         return (relayed, true);
     }
 
-    // Was the withheld message earlier than the relayed message?
+    /**
+     * @dev Returns whether the first message is earlier than the second message.
+     */
     function messageIsEarlier(Pledge.Request memory withheld, Pledge.Request memory relayed) internal pure returns (bool) {
         if (withheld.blockNumber != relayed.blockNumber) {
             return withheld.blockNumber < relayed.blockNumber;
@@ -135,9 +149,12 @@ contract RelayPledge {
         return compare(withheld.message, relayed.message) < 0;
     }
 
-    // Arbitrary within-block request ordering scheme.
-    // The only requirement is that it gives consistent results and runs cheaply.
-    // We return a negative if `a` is earlier, 0 if equal, and a positive if `a` is later.
+    /**
+     * @dev Arbitrary within-block request ordering scheme
+     *
+     * The only requirement is that it gives consistent results and runs cheaply.
+     * We return a negative if `a` is earlier, 0 if equal, and a positive if `a` is later.
+     */
     function compare(bytes memory a, bytes memory b) internal pure returns (int16) {
         if (a.length != b.length) {
             return a.length < b.length? -1 : int8(1);
@@ -154,6 +171,9 @@ contract RelayPledge {
         return 0;
     }
 
+    /**
+     * @dev Returns whether str has the given prefix.
+     */
     function hasPrefix(bytes memory prefix, bytes memory str) internal pure returns (bool) {
         if (str.length < prefix.length) {
             return false;

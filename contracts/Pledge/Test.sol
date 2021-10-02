@@ -4,6 +4,9 @@ pragma solidity ^0.8.0;
 
 import "./RelayPledge.sol";
 
+/**
+ * @title Exposed RelayPledge for testing purposes
+ */
 contract ExposedRelayPledge is RelayPledge {
     constructor(address _abiHack, address _server) RelayPledge(_abiHack, _server) {}
 
