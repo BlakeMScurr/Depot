@@ -27,15 +27,25 @@ contract RelayPledge {
         server = _server;
     }
 
-    // Judges whether the server broke its pledge to relay messages.
+    /**
+     * @dev Judges whether the server broke its pledge to relay messages.
+     *
+     * The plaintiff (msg.sender) provides receipts from the server as evidence.
+     * The find receipt relays a message back to the finder, and confirms that the
+     * relayed message is the latest message before a given point.
+     * The store receipt confirms that the server stored a given message, which
+     * the plaintiff alleges should have been relayed in the find receipt.
+     *
+     * If the plaintiff brough valid evidence, then either:
+     * - the server relayed a valid message, which is later than the "withheld" message
+     * - or the server broke its pledge. 
+     */
     function isBroken(Pledge.Receipt memory storeReceipt, Pledge.Receipt memory findReceipt) external view returns (bool) {
-        // We check that the alledgedly withheld message was stored and requested
         FindRequest memory findRequest;
         bytes memory findResponse;
         Pledge.Request memory withheld;
         (findRequest, findResponse, withheld) = validateReceipts(storeReceipt, findReceipt);
 
-        // We check that the server relayed a genuine message when asked
         bool valid;
         Pledge.Request memory relayed;
         (relayed, valid) = validRelay(findRequest, findResponse);
@@ -43,7 +53,6 @@ contract RelayPledge {
             return true;
         }
 
-        // If the relayed message was earlier than the withheld message, then the server is broken its pledge
         return messageIsEarlier(relayed, withheld);
     }
 
