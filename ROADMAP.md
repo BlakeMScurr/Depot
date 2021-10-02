@@ -41,3 +41,7 @@ With business logic contracts, no one can *force* the server to create junk data
 # Reccomendation and Search
 
 Reccomendation and Search algorithms are a critical part of any social media platform. This is a very complex feature, but ideally we would be able to implemt a neural network training and execution algorithms as quadratic arithmetic programs, and produce zk-snarks (or similar). These snarks would prove that a given model had been trained on all available data in the silo (optionally matching some criteria), and that the model had been faithfully executed for a given prompt/parameter.This would be a critical breakthrough in social media, as we'd finally be able to trust the reccomenders that are currently so opaque and manipulative.
+
+# L2 scaling
+
+The minimum throughput of the system is limited by the capacity of the underlying blockchain. If a server became malicious and tried to restrict access to users (despite the cost to itself), the minimum throughput would simply be the number of messages able to be put in the on chain pool. To increase this number, we should investiagate rollups, cross-chain architectures etc. Any EVM compatible rollup with a tie back to the Ethereum block.number would be the easiest solution - we could deploy another version of the liveliness pledge there, and reference it in the adjudicator.
