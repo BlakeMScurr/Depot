@@ -20,7 +20,12 @@ import "./Pledge.sol";
 contract LivelinessPledge {
     event Receipt(bytes indexed meta, bytes indexed message, address indexed user, uint256 blockNumber, bytes signature);
 
-    mapping(bytes32 => Pledge.Request) inbox;
+    struct RequestRecord {
+        Pledge.Request request;
+        bool waiting;
+    }
+
+    mapping(bytes32 => RequestRecord) inbox;
     address serverSigner;
     uint256 leeway;
 
@@ -42,7 +47,7 @@ contract LivelinessPledge {
     function request(Pledge.Request memory rq) public {
         require(Pledge.validUserSignature(rq), "Invalid signature");
         require(rq.blockNumber >= block.number, "Enforcement period must start in the future");
-        inbox[keccak256(abi.encode(rq))] = rq;
+        inbox[keccak256(abi.encode(rq))] = RequestRecord(rq, true);
     }
 
     /**
@@ -52,11 +57,19 @@ contract LivelinessPledge {
     * @param requestHash hash of the request being responded to, used to look up the request.
     */
     function respond(bytes memory signature, bytes memory response, bytes32 requestHash) public {
-        Pledge.Request memory rq = inbox[requestHash];
+        Pledge.Request memory rq = inbox[requestHash].request;
         Pledge.Receipt memory signed = Pledge.Receipt(rq, response, signature);
         Pledge.requireValidServerSignature(signed, serverSigner);
         emit Receipt(rq.meta, rq.message, rq.user, rq.blockNumber, signature);
-        delete inbox[requestHash];
+        inbox[requestHash].waiting = false;
+    }
+
+    /**
+    * @dev Whether the request is waiting the inbox.
+    * @param requestHash hash of the request being look up.
+    */
+    function waiting(bytes32 requestHash) public view returns (bool) {
+        return inbox[requestHash].waiting;
     }
 
     /**
@@ -64,6 +77,6 @@ contract LivelinessPledge {
     * @param requestHash hash of the request that hasn't been responded to.
     */
     function isBroken(bytes32 requestHash) public view returns (bool) {
-        return inbox[requestHash].blockNumber + leeway < block.number;
+        return inbox[requestHash].waiting && inbox[requestHash].request.blockNumber + leeway < block.number;
     }
 }

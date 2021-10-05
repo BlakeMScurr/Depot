@@ -5,7 +5,6 @@ export class Receipt {
   response: ethers.BytesLike;
   signature: ethers.BytesLike;
 
-
   constructor(request: Request, response: ethers.BytesLike, signature: ethers.BytesLike) {
     this.request = request;
     this.response = response;
@@ -61,7 +60,11 @@ export class Request {
           this.signature,
         ]
       ]
-    ) 
+    )
+  }
+
+  hash() {
+    return ethers.utils.keccak256(this.encodeAsBytes())
   }
 }
 
