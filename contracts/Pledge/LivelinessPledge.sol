@@ -59,6 +59,7 @@ contract LivelinessPledge {
     function respond(bytes memory signature, bytes memory response, bytes32 requestHash) public {
         Pledge.Request memory rq = inbox[requestHash].request;
         Pledge.Receipt memory signed = Pledge.Receipt(rq, response, signature);
+        require(inbox[requestHash].waiting, "Request not waiting");
         Pledge.requireValidServerSignature(signed, serverSigner);
         emit Receipt(rq.meta, rq.message, rq.user, rq.blockNumber, signature);
         inbox[requestHash].waiting = false;
