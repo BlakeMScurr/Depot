@@ -35,9 +35,9 @@ library Pledge {
     * @dev Verifies a server's receipt, reverts if invalid.
     * @param receipt Receipt to verify.
     */
-    function requireValidServerSignature(Receipt memory receipt, address signer) public pure {
+    function requireValidServerSignature(Receipt memory receipt, address server) public pure {
         bytes32 hash = keccak256(abi.encode(receipt.request, receipt.response));
-        require(hash.toEthSignedMessageHash().recover(receipt.signature) == signer, "Server signature must be valid");
+        require(hash.toEthSignedMessageHash().recover(receipt.signature) == server, "Server signature must be valid");
     }
 
     /**

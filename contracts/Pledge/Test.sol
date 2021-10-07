@@ -3,6 +3,20 @@
 pragma solidity ^0.8.0;
 
 import "./RelayPledge.sol";
+import "./Pledge.sol";
+
+/**
+ * @title Exposes the pledge library for testing purposes
+ */
+contract ExposedPledgeLibrary {
+    function validUserSignature(Pledge.Request memory rq) public pure returns (bool) {
+        return Pledge.validUserSignature(rq);
+    }
+
+    function requireValidServerSignature(Pledge.Receipt memory receipt, address signer) public pure {
+        Pledge.requireValidServerSignature(receipt, signer);
+    }
+}
 
 /**
  * @title Exposed RelayPledge for testing purposes
