@@ -2,8 +2,20 @@
 
 pragma solidity ^0.8.0;
 
-import "./RelayPledge.sol";
-import "./Pledge.sol";
+import "./Pledge/RelayPledge.sol";
+import "./Pledge/Pledge.sol";
+import "./Bond.sol";
+
+/**
+ * @title Exposes Bond's slash method for testing purposes
+ */
+contract ExposedBond is Bond {
+    constructor(address erc20) Bond(erc20){}
+
+    function _slash(uint256 burn) public {
+        super.slash(burn);
+    }
+}
 
 /**
  * @title Exposes the pledge library for testing purposes

@@ -11,29 +11,22 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 */
 contract Bond is Ownable {
     IERC20 erc20;
-    uint256 lastDrawdown;
+    uint256 _lastWithdrawl;
 
     mapping(bytes32 => bool) perjuries; // cases of broken pledges
 
     constructor(address _erc20) {
         erc20 = IERC20(_erc20);
-        lastDrawdown = block.number;
+        _lastWithdrawl = block.number;
     }
 
     /**
-    * @dev Lock up token as a reward for the server.
+    * @dev Every month the server can optionally withdraw up to a 200th of the locked funds (~%5.8 per year),
     */
-    function lock(uint256 amount) external {
-        erc20.transferFrom(msg.sender, address(this), amount);
-    }
-
-    /**
-    * @dev Every month the server can optionally draw up to a 200th of the locked funds (~%5.8 per year),
-    */
-    function draw(uint256 amount) external onlyOwner {
-        require(amount < erc20.balanceOf(address(this)) / 200, "You can only draw funds less than our monthly drawdown");        
-        require(lastDrawdown + 172800 < block.number, "You must wait a month to withdraw your monthly allowance"); // blocks/month = 4 * 60 * 24 * 30 = 172800
-        lastDrawdown = block.number;
+    function withdraw(uint256 amount) external onlyOwner {
+        require(amount <= erc20.balanceOf(address(this)) / 200, "At most you can withdraw the monthly allowance");
+        require(_lastWithdrawl + 172800 < block.number, "You must wait a month to withdraw your monthly allowance"); // blocks/month = 4 * 60 * 24 * 30 = 172800
+        _lastWithdrawl = block.number;
         erc20.transfer(this.owner(), amount);
     }
 
@@ -51,5 +44,12 @@ contract Bond is Ownable {
         uint256 amountLocked = erc20.balanceOf(address(this));
         erc20.transfer(msg.sender, amountLocked / burn / 200);
         erc20.transfer(address(0), amountLocked / burn);
+    }
+
+    /**
+    * @dev The last block where the server withdrew funds
+    */
+    function lastWithdrawl() public view returns (uint256) {
+        return _lastWithdrawl;
     }
 }
