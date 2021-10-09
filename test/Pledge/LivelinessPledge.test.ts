@@ -24,7 +24,8 @@ describe("RelayPledge", function () {
   describe("LivelinessPledge", () => {
       describe("Request", () => {
         it("Should accept a valid request", async () => {
-            const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some message"), 4)
+            const bn = await ethers.provider.getBlockNumber()
+            const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some message"), bn + 1);
             expect(await livelinessPledge.waiting(rq.hash())).to.be.false;
             await livelinessPledge.request(rq);
             expect(await livelinessPledge.waiting(rq.hash())).to.be.true;
@@ -40,11 +41,8 @@ describe("RelayPledge", function () {
         })
 
         it("Should reject invalid block numbers", async () => {
-            const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some message"), 0)
-
             const bn = await ethers.provider.getBlockNumber()
-            expect(bn).to.be.gt(0);
-            expect(bn).to.equal(3); // TODO: why does block number seem to default to 3? Can we rely on this?
+            const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some message"), bn - 1)
 
             expect(await livelinessPledge.waiting(rq.hash())).to.be.false;
             await expect(livelinessPledge.request(rq)).to.be.revertedWith("Enforcement period must start in the future");
@@ -54,7 +52,8 @@ describe("RelayPledge", function () {
 
       describe("Request", () => {
             it("Should handle valid responses", async () => {
-                const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some message"), 5)
+                const bn = await ethers.provider.getBlockNumber()
+                const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some message"), bn + 1)
                 await livelinessPledge.request(rq);
                 expect(await livelinessPledge.waiting(rq.hash())).to.be.true;
     
@@ -78,7 +77,8 @@ describe("RelayPledge", function () {
             })
 
             it("Should require valid server signatures", async () => {
-                const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some message"), 6)
+                const bn = await ethers.provider.getBlockNumber()
+                const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some message"), bn + 1)
                 await livelinessPledge.request(rq);
                 expect(await livelinessPledge.waiting(rq.hash())).to.be.true;
 
@@ -93,7 +93,8 @@ describe("RelayPledge", function () {
     describe("Late", () => {
         it("Should catch late responses", async () => {
             // Add a request to the inbox, the pledge is not yet broken
-            const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some message"), 7)
+            const bn = await ethers.provider.getBlockNumber()
+            const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some message"), bn + 1)
             await livelinessPledge.request(rq);
             expect(await livelinessPledge.waiting(rq.hash())).to.be.true;
             expect(await ethers.provider.getBlockNumber()).to.equal(7);
