@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
@@ -10,13 +10,13 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 * @dev Bond locks up the server's token, slashes it if the server misbehaves, and gives the server a monthly income.
 */
 contract Bond is Ownable {
-    IERC20 erc20;
+    ERC20Burnable erc20;
     uint256 _lastWithdrawl;
 
     mapping(bytes32 => bool) perjuries; // cases of broken pledges
 
     constructor(address _erc20) {
-        erc20 = IERC20(_erc20);
+        erc20 = ERC20Burnable(_erc20);
         _lastWithdrawl = block.number;
     }
 
@@ -43,7 +43,7 @@ contract Bond is Ownable {
     function slash(uint256 burn) internal {
         uint256 amountLocked = erc20.balanceOf(address(this));
         erc20.transfer(msg.sender, amountLocked / burn / 200);
-        erc20.transfer(address(0), amountLocked / burn);
+        erc20.burn(amountLocked / burn);
     }
 
     /**
