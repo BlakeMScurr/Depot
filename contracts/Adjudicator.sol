@@ -26,7 +26,7 @@ contract Adjudicator is Bond {
     mapping(bytes32 => bool) guiltyLivelyVerdicts;
     function notLively(bytes32 requestHash) public {
         if (!guiltyLivelyVerdicts[requestHash] && livelinessPledge.isBroken(requestHash)) {
-            super.slash(20);
+            super.slash(1, 20);
             guiltyLivelyVerdicts[requestHash] = true;
         }
     }
@@ -39,7 +39,7 @@ contract Adjudicator is Bond {
     function notHonest(Pledge.Receipt memory storeReceipt, Pledge.Receipt memory findReceipt) public {
         bytes32 requestHash = keccak256(abi.encode(storeReceipt.request, findReceipt.request));
         if (!guiltyRelayVerdicts[requestHash] && relayPledge.isBroken(storeReceipt, findReceipt)) {
-            super.slash(5);
+            super.slash(1, 5);
             guiltyRelayVerdicts[requestHash] = true;
         }
     }

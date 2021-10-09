@@ -50,7 +50,7 @@ describe("RelayPledge", function () {
     })
 
     // --w--t--r-->
-    it("Breaks pledge for relayed is after target", async () => {
+    it("Breaks pledge for relayed after target", async () => {
       await isBrokenTest(
         await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 0), // withheld
         new findRequest(1, "", await poster.getAddress()), // target
@@ -60,7 +60,7 @@ describe("RelayPledge", function () {
     })
 
     // --r--w--t-->
-    it("Breaks pledge for later withheld than relayed", async () => {
+    it("Breaks pledge for withheld after relayed", async () => {
       await isBrokenTest(
         await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 1), // withheld
         new findRequest(2, "", await poster.getAddress()), // target
@@ -69,7 +69,7 @@ describe("RelayPledge", function () {
       )
     })
 
-    async function isBrokenTest(withheld: Request, requested: findRequest, relayed: Request, value: boolean) {
+    async function isBrokenTest(withheld: Request, target: findRequest, relayed: Request, value: boolean) {
       expect(await relayPledge.isBroken(
         await newReceipt(
           server,
@@ -81,7 +81,7 @@ describe("RelayPledge", function () {
           await newRequest(
             reader,
             "find",
-            requested.encodeAsBytes(),
+            target.encodeAsBytes(),
             10,
           ),
           relayed.encodeAsBytes(),

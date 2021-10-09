@@ -68,16 +68,16 @@ describe("RelayPledge", function () {
             await token.connect(tokenOwner).transfer(exposedBond.address, 100);
             expect(await token.balanceOf(exposedBond.address)).to.eq(100);
 
-            await exposedBond.connect(slasher)._slash(1);
+            await exposedBond.connect(slasher)._slash(1, 1);
             expect(await token.balanceOf(exposedBond.address)).to.eq(0);
             expect(await token.balanceOf(await slasher.getAddress())).to.eq(0);
             
-            // slashing 50% of 400 tokens burns 200 and gives 1 to the slasher, leaving the server with 199
-            await token.connect(tokenOwner).transfer(exposedBond.address, 400);
-            expect(await token.balanceOf(exposedBond.address)).to.eq(400);
+            // slashing 25% of 800 tokens burns 200 and gives 1 to the slasher, leaving the server with 199
+            await token.connect(tokenOwner).transfer(exposedBond.address, 800);
+            expect(await token.balanceOf(exposedBond.address)).to.eq(800);
             
-            await exposedBond.connect(slasher)._slash(2);
-            expect(await token.balanceOf(exposedBond.address)).to.eq(199);
+            await exposedBond.connect(slasher)._slash(1, 4);
+            expect(await token.balanceOf(exposedBond.address)).to.eq(599);
             expect(await token.balanceOf(await slasher.getAddress())).to.eq(1);
         })
     })

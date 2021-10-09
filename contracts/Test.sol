@@ -12,8 +12,8 @@ import "./Bond.sol";
 contract ExposedBond is Bond {
     constructor(address erc20) Bond(erc20){}
 
-    function _slash(uint256 burn) public {
-        super.slash(burn);
+    function _slash(uint256 numerator, uint256 denominator) public {
+        super.slash(numerator, denominator);
     }
 }
 

@@ -31,25 +31,27 @@ contract Bond is Ownable {
     }
 
     /**
-    * @dev A user can slash the bond if the server misbehaves.
+    * @dev Slash the bond by a given percentage if the server misbehaves.
     *
     * To be used by the parent contracts, depending on its pledges.
     *
     * The amount burned is 200 times the reward so that even if the server repeatedly called slash to recieve its bond early
     * via the reward, it would only end up with approximately its monthly income.
     *
-    * @param burn amount The amount of tokens to be burned.
+    * @param numerator of the amount of tokens to be burned.
+    * @param denominator of the amount of tokens to be burned.
     */
-    function slash(uint256 burn) internal {
-        uint256 amountLocked = erc20.balanceOf(address(this));
-        erc20.transfer(msg.sender, amountLocked / burn / 200);
-        erc20.burn(amountLocked / burn);
+    function slash(uint256 numerator, uint256 denominator) internal {
+        uint256 locked = erc20.balanceOf(address(this));
+        uint256 burned = numerator * locked / denominator;
+        erc20.transfer(msg.sender, burned / 200);
+        erc20.burn(burned);
     }
 
     /**
     * @dev The last block where the server withdrew funds
     */
-    function lastWithdrawl() public view returns (uint256) {
+    function lastWithdrawl() external view returns (uint256) {
         return _lastWithdrawl;
     }
 }
