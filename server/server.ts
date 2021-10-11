@@ -10,6 +10,7 @@ http.createServer(function(request, response) {
             handleRequest(siloRequest);
             response.end('Ended\n');
         } catch (e) {
+            console.error(e);
             response.writeHead(500);
             response.end(e.message);
         }
