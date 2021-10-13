@@ -1,8 +1,8 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import * as e from "ethers";
-import { ExposedRelayPledge__factory, RelayPledge__factory, ABIHack__factory, Pledge__factory, ExposedRelayPledge, RelayPledge } from "../../typechain"
-import { newRequest, findRequest, newReceipt, Request } from "../../client/Requests"
+import { ExposedRelayPledge__factory, RelayPledge__factory, ABIHack__factory, Pledge__factory, ExposedRelayPledge, RelayPledge } from "../../../typechain"
+import { newRequest, findRequest, newReceipt, Request } from "../../../client/Requests"
 
 describe("RelayPledge", function () {
   let exposedRelayPledge: ExposedRelayPledge;

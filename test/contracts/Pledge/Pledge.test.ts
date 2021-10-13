@@ -1,8 +1,8 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import * as e from "ethers";
-import { Pledge__factory, Pledge, ExposedPledgeLibrary__factory, ExposedPledgeLibrary } from "../../typechain"
-import { newRequest, newReceipt } from "../../client/Requests"
+import { Pledge__factory, Pledge, ExposedPledgeLibrary__factory, ExposedPledgeLibrary } from "../../../typechain"
+import { newRequest, newReceipt } from "../../../client/Requests"
 
 describe("RelayPledge", function () {
     let pledge: ExposedPledgeLibrary;

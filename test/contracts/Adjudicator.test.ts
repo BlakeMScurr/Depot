@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import * as e from "ethers";
-import { Token, Bond, Bond__factory, Token__factory, ExposedBond, ExposedBond__factory, RelayPledge, RelayPledge__factory, ABIHack__factory, Pledge__factory, LivelinessPledge__factory, Adjudicator__factory, Adjudicator, LivelinessPledge } from "../../typechain"
+import { Token, Token__factory, RelayPledge, RelayPledge__factory, ABIHack__factory, Pledge__factory, LivelinessPledge__factory, Adjudicator__factory, Adjudicator, LivelinessPledge } from "../../typechain"
 import { newRequest, newReceipt, findRequest } from "../../client/Requests"
 
 describe("RelayPledge", function () {

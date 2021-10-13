@@ -1,8 +1,8 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import * as e from "ethers";
-import { Pledge__factory, LivelinessPledge, LivelinessPledge__factory } from "../../typechain"
-import { newRequest, newReceipt } from "../../client/Requests"
+import { Pledge__factory, LivelinessPledge, LivelinessPledge__factory } from "../../../typechain"
+import { newRequest, newReceipt } from "../../../client/Requests"
 
 describe("RelayPledge", function () {
   let livelinessPledge: LivelinessPledge;
@@ -97,19 +97,18 @@ describe("RelayPledge", function () {
             const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some message"), bn + 1)
             await livelinessPledge.request(rq);
             expect(await livelinessPledge.waiting(rq.hash())).to.be.true;
-            expect(await ethers.provider.getBlockNumber()).to.equal(7);
             expect(await livelinessPledge.isBroken(rq.hash())).to.be.false;
             
             // Response is almost late
             for (let i = 0; i < 10; i++) {
                 await ethers.provider.send("evm_mine", [])
             }
-            expect(await ethers.provider.getBlockNumber()).to.equal(17);
+            expect(await ethers.provider.getBlockNumber()).to.gte(bn+10);
             expect(await livelinessPledge.isBroken(rq.hash())).to.be.false;
             
             // Response is now late and the pledge is broken
             await ethers.provider.send("evm_mine", [])
-            expect(await ethers.provider.getBlockNumber()).to.equal(18);
+            expect(await ethers.provider.getBlockNumber()).to.gte(bn+11);
             expect(await livelinessPledge.isBroken(rq.hash())).to.be.true;
 
             // Pledge isn't broken after responding to the request

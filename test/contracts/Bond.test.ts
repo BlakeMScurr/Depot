@@ -2,7 +2,6 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import * as e from "ethers";
 import { Token, Bond, Bond__factory, Token__factory, ExposedBond, ExposedBond__factory } from "../../typechain"
-import { newRequest, newReceipt } from "../../client/Requests"
 
 describe("RelayPledge", function () {
     let token: Token

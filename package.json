@@ -18,9 +18,6 @@
     "typescript": "^4.4.2",
     "yargs-parser": "^20.2.9"
   },
-  "scripts": {
-    "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'server/**/*.test.ts'"
-  },
   "dependencies": {
     "@openzeppelin/contracts": "^4.3.2",
     "solidity-docgen": "^0.5.14"
