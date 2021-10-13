@@ -1,7 +1,7 @@
 // core logic for the server
 import { ethers } from 'ethers';
 import * as lpArtifact from "../artifacts/contracts/Pledge/LivelinessPledge.sol/LivelinessPledge.json";
-import { Request } from '../client/Requests';
+import { findRequest, newReceipt, Receipt, Request } from '../client/Requests';
 
 const lp = new ethers.utils.Interface(lpArtifact.abi);
 
@@ -28,4 +28,27 @@ export async function validateRequest(siloRequest: any, provider: ethers.provide
     if (r.blockNumber < bn) {
         throw new Error("Enforcement period for offchain request must start in the future")
     }
+}
+
+export class memoryDB {
+    storage: Map<string, Array<Request>>;
+
+    constructor() {
+        this.storage = new Map()
+    }
+
+    store(rq: Request):Receipt {
+        if (!this.storage.get(rq.user)) this.storage.set(rq.user, [])
+        newReceipt()
+        this.storage.get(rq.user)?.push()
+    }
+
+    find(rq: findRequest):Receipt {
+
+    }
+}
+
+export interface db {
+    store(rq: Request):Receipt
+    find(rq: findRequest):Receipt
 }
