@@ -66,15 +66,28 @@ export class Request {
   hash() {
     return ethers.utils.keccak256(this.encodeAsBytes())
   }
+
+  recoverSigner() {
+    let hashBinary = encodeMessage(this.meta, this.message, this.user, this.blockNumber)
+
+    // as per https://github.com/ethers-io/ethers.js/issues/447#issuecomment-470618705
+    let messageHash = ethers.utils.hashMessage(hashBinary);
+    let messageHashBytes = ethers.utils.arrayify(messageHash);
+    return ethers.utils.recoverAddress(messageHashBytes, this.signature)
+  }
+}
+
+function encodeMessage(meta: ethers.BytesLike, message: ethers.BytesLike, user: string, blockNumber: ethers.BigNumberish) {
+  let encoded = ethers.utils.defaultAbiCoder.encode(["bytes", "bytes", "address", "uint256"], [meta, message, user, blockNumber])
+  let hashed = ethers.utils.keccak256(encoded);
+  return ethers.utils.arrayify(hashed);
 }
 
 export async function newRequest(signer: ethers.Signer, meta: string, message: ethers.BytesLike, blockNumber: number):Promise<Request> {
   let user = await signer.getAddress();
   let _meta = ethers.utils.toUtf8Bytes(meta);
 
-  let encoded = ethers.utils.defaultAbiCoder.encode(["bytes", "bytes", "address", "uint256"], [_meta, message, user, blockNumber])
-  let hashed = ethers.utils.keccak256(encoded);
-  let hashBinary = ethers.utils.arrayify(hashed);
+  let hashBinary = encodeMessage(_meta, message, user, blockNumber)
   let signature = await signer.signMessage(hashBinary);
 
   return new Request(_meta, message, user, blockNumber, signature)
