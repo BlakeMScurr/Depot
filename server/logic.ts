@@ -4,7 +4,19 @@ import * as lpArtifact from "../artifacts/contracts/Pledge/LivelinessPledge.sol/
 import { Request } from '../client/Requests';
 
 const lp = new ethers.utils.Interface(lpArtifact.abi);
+
 export async function handleRequest(siloRequest: any, provider: ethers.providers.Provider) {
+    validateRequest(siloRequest, provider)
+    let rq: Request = siloRequest;
+    switch (ethers.utils.toUtf8String(rq.meta)) {
+        case "store":
+        case "find":
+        default:
+            throw new Error("Unknown request type: " + ethers.utils.toUtf8String(rq.meta))
+    }
+}
+
+export async function validateRequest(siloRequest: any, provider: ethers.providers.Provider) {
     lp.encodeFunctionData("request", [siloRequest]);
     let r: Request = siloRequest
 
