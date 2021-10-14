@@ -31,21 +31,51 @@ export async function validateRequest(siloRequest: any, provider: ethers.provide
 }
 
 export class memoryDB {
-    storage: Map<string, Array<Request>>;
+    // Map from user to blockNumber to ordered list of receipts (ordered by message text)
+    storage: Map<string, Map<number, Array<[ethers.Bytes, Receipt]>>>;
 
     constructor() {
         this.storage = new Map()
     }
 
-    store(rq: Request):Receipt {
-        if (!this.storage.get(rq.user)) this.storage.set(rq.user, [])
-        newReceipt()
-        this.storage.get(rq.user)?.push()
+    store(receipt: Receipt, user: string, blockNumber: number, message: ethers.Bytes) {
+        // find the right user/block part of storage
+        if (!this.storage.get(user)) this.storage.set(user, new Map())
+        let userMap: Map<number, Array<[ethers.Bytes, Receipt]>> = this.storage.get(user)!;
+        if (!userMap.get(blockNumber)) userMap.set(blockNumber, [])
+        let messages = userMap.get(blockNumber)!;
+
+        // add request in order
+        let i = sortedIndex(message, messages)
+        messages.splice(i, 0, [message, receipt])
     }
 
     find(rq: findRequest):Receipt {
-
+        
     }
+}
+
+// credit https://stackoverflow.com/a/21822316/7371580
+function sortedIndex(message: ethers.Bytes, list: Array<[ethers.Bytes, Receipt]>) {
+    var low = 0,
+        high = list.length;
+
+    while (low < high) {
+        var mid = (low + high) >>> 1;
+        if (lt(list[mid][0], message)) low = mid + 1;
+        else high = mid;
+    }
+    return low;
+}
+
+function lt(a: ethers.Bytes, b: ethers.Bytes):boolean {
+    if (a.length != b.length) return a.length < b.length
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] != b[i]) {
+            return a[i] < b[i];
+        }
+    }
+    return false
 }
 
 export interface db {
