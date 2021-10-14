@@ -1,0 +1,370 @@
+#+BEGIN_SRC solidity -n :async :results verbatim code
+  //SPDX-License-Identifier: Unlicense
+  pragma solidity ^0.8.0;
+  
+  import "hardhat/console.sol";
+  import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+  import "@openzeppelin/contracts/access/Ownable.sol";
+  
+  /**
+  * @title Server's locked up tokens
+  * @dev Bond locks up the server's token, slashes it if the server misbehaves, and gives the server a monthly income.
+  */
+  contract Bond is Ownable {
+      ERC20Burnable erc20;
+      uint256 _lastWithdrawl;
+  
+      mapping(bytes32 => bool) perjuries; // cases of broken pledges
+  
+      constructor(address _erc20) {
+          erc20 = ERC20Burnable(_erc20);
+          _lastWithdrawl = block.number;
+      }
+  
+      /**
+      * @dev Every month the server can optionally withdraw up to a 200th of the locked funds (~%5.8 per year),
+      */
+      function withdraw(uint256 amount) external onlyOwner {
+          require(amount <= erc20.balanceOf(address(this)) / 200, "At most you can withdraw the monthly allowance");
+          require(_lastWithdrawl + 172800 < block.number, "You must wait a month to withdraw your monthly allowance"); // blocks/month = 4 * 60 * 24 * 30 = 172800
+          _lastWithdrawl = block.number;
+          erc20.transfer(this.owner(), amount);
+      }
+  
+      /**
+      * @dev Slash the bond by a given percentage if the server misbehaves.
+      *
+      * To be used by the parent contracts, depending on its pledges.
+      *
+      * The amount burned is 200 times the reward so that even if the server repeatedly called slash to recieve its bond early
+      * via the reward, it would only end up with approximately its monthly income.
+      *
+      * @param numerator of the amount of tokens to be burned.
+      * @param denominator of the amount of tokens to be burned.
+      */
+      function slash(uint256 numerator, uint256 denominator) internal {
+          uint256 locked = erc20.balanceOf(address(this));
+          uint256 burned = numerator * locked / denominator;
+          erc20.transfer(msg.sender, burned / 200);
+          erc20.burn(burned);
+      }
+  
+      /**
+      * @dev The last block where the server withdrew funds
+      */
+      function lastWithdrawl() external view returns (uint256) {
+          return _lastWithdrawl;
+      }
+  }
+#+END_SRC
+
+1
+#+BEGIN_SRC text -n :async :results verbatim code
+  We start with the pragma solidity statement.
+  
+  Then, we import the console.sol file that we
+  created in the previous lesson.
+  
+  We also import the ERC20Burnable.sol file that
+  we created in the previous lesson.
+  
+  Finally, we import the Ownable.sol file that
+  we created in the previous lesson.
+  
+  Next, we declare a new contract called Bond.
+  
+  This contract extends the Ownable contract.
+  
+  The Ownable contract gives us the ability to
+  access the owner of the contract.
+  
+  This will be useful later in the code.
+  
+  Then, we declare a mapping of bytes32 to bool.
+  
+  This is a mapping of a 32-byte hash to a
+  boolean value.
+  
+  We'll use this mapping to store the cases of
+  broken pledges.
+  
+  Then, we declare a constructor function.
+  
+  This constructor function takes in an address
+  of the ERC20Burnable contract.
+  
+  We'll use this address to transfer tokens to
+  the Bond contract.
+  
+  Then, we declare a function called withdraw.
+  
+  This function takes in an amount as a
+  parameter.
+  
+  This amount is the amount of tokens that the
+  server can withdraw from the Bond contract.
+  
+  We'll use this function later in the code.
+  
+  Then, we declare a function called slash.
+  
+  This function takes in two parameters:
+  numerator and denominator.
+  
+  The numerator is the percentage of the tokens
+  that will be burned.
+  
+  The denominator is the percentage of the
+  tokens that will be burned.
+  
+  We'll use this function later in the code.
+  
+  Then, we declare a function called
+  lastWithdrawl.
+  
+  This function takes in no parameters.
+  
+  It returns an uint256.
+  
+  We'll use this function later in the code.
+#+END_SRC
+
+2
+#+BEGIN_SRC text -n :async :results verbatim code
+  We start by importing the console.sol file,
+  which contains the console functions that
+  we'll use to interact with the smart contract.
+  
+  We also import the ERC20Burnable and Ownable
+  contracts from OpenZeppelin.
+  
+  Next, we declare the smart contract with the
+  "contract" keyword, followed by the contract
+  name.
+  
+  Next, we declare a mapping state variable that
+  will store the value of the perjuries
+  variable.
+  
+  This is a mapping of a hash of the server's
+  address to a boolean value.
+  
+  We'll see how this is used in a bit.
+  
+  Then, we create a constructor function that
+  will get called whenever we deploy the smart
+  contract to the blockchain.
+  
+  This is where we'll set the value of the
+  perjuries mapping.
+  
+  Next, we declare a function that will allow
+  the server to withdraw some of the tokens that
+  it has locked up.
+  
+  This function will be called by the parent
+  contracts, depending on its pledges.
+  
+  Then, we declare a function that will slash
+  the bond by a given percentage if the server
+  misbehaves.
+  
+  Finally, we declare a function that will
+  return the last block number where the server
+  withdrew its monthly allowance.
+#+END_SRC
+
+3
+#+BEGIN_SRC text -n :async :results verbatim code
+  We start with the pragma solidity statement.
+  
+  Then, we import the console.sol smart
+  contract.
+  
+  This is a helper contract that will allow us
+  to print to the console.
+  
+  Next, we import the ERC20Burnable.sol smart
+  contract.
+  
+  This is a standard ERC20 token smart contract
+  that we will use to store our bond tokens.
+  
+  Finally, we import the Ownable.sol smart
+  contract.
+  
+  This is a standard smart contract that allows
+  us to control the ownership of the contract.
+  
+  Next, we declare the Bond smart contract.
+  
+  This smart contract inherits from the Ownable
+  contract.
+  
+  This means that the Bond smart contract has
+  the same functionality as the Ownable
+  contract, but also has the functionality of
+  the ERC20Burnable contract.
+  
+  Next, we declare a mapping of bytes32 to bool.
+  
+  This is a mapping of hashes to booleans.
+  
+  We will use this mapping to store the cases of
+  broken pledges.
+  
+  Then, we declare the constructor function.
+  
+  We declare an ERC20Burnable contract instance
+  variable, and we set the lastWithdrawl state
+  variable to the current block number.
+  
+  Next, we declare the withdraw function.
+  
+  This function will allow the server to
+  withdraw up to a 200th of the locked funds
+  (~%5.8 per year).
+  
+  Next, we declare the slash function.
+  
+  This function will allow the parent contracts
+  to slash the bond by a given percentage if the
+  server misbehaves.
+  
+  Next, we declare the lastWithdrawl function.
+  
+  This function will return the last block
+  number where the server withdrew funds.
+#+END_SRC
+
+4
+#+BEGIN_SRC text -n :async :results verbatim code
+  We start by importing the console.sol file,
+  which contains the console functions that
+  we'll use to interact with the smart contract.
+  
+  We then import the ERC20Burnable.sol file,
+  which contains the ERC20Burnable smart
+  contract.
+  
+  We then import the Ownable.sol file, which
+  contains the Ownable smart contract.
+  
+  Next, we declare the Bond contract.
+  
+  This is the smart contract that we'll be
+  interacting with.
+  
+  We have declared it as a sub-contract of the
+  main smart contract, which is why we need to
+  specify the address of the ERC20Burnable smart
+  contract.
+  
+  Then, we declare the constructor function.
+  
+  This is where we'll set the value of the
+  candidate state variable that will get stored
+  to the blockchain upon migration.
+  
+  Notice that the constructor function has the
+  same name as the smart contract.
+  
+  This is how Solidity knows that the function
+  is a constructor.
+  
+  Next, we declare the withdraw function.
+  
+  This is where we'll withdraw the monthly
+  income of the bond.
+  
+  We require that the lastWithdrawl variable is
+  greater than the current block number, because
+  we don't want to allow the server to withdraw
+  before the month is over.
+  
+  Then, we declare the slash function.
+  
+  This is where we'll slash the bond by a given
+  percentage if the server misbehaves.
+  
+  Finally, we declare the lastWithdrawl
+  function.
+  
+  This is where we'll get the last block where
+  the server withdrew funds.
+#+END_SRC
+
+5
+#+BEGIN_SRC text -n :async :results verbatim code
+  We start by importing the console.sol file,
+  which contains the code for the console
+  functions that we'll use to interact with the
+  smart contract.
+  
+  Then, we import the ERC20Burnable.sol file,
+  which contains the code for the ERC20Burnable
+  contract, which is a contract that extends the
+  ERC20 contract by adding the burn function.
+  
+  Finally, we import the Ownable.sol file, which
+  contains the code for the Ownable contract,
+  which is a contract that extends the
+  ERC20Burnable contract by adding the onlyOwner
+  modifier to the transfer function.
+  
+  Next, we declare the smart contract with the
+  "contract" keyword, followed by the contract
+  name.
+  
+  Next, we declare the ERC20Burnable contract as
+  a state variable that will store the address
+  of the ERC20Burnable contract.
+  
+  Then, we declare the lastWithdrawl state
+  variable that will store the last time the
+  server withdrew its monthly income.
+  
+  Then, we create a constructor function that
+  will get called whenever we deploy the smart
+  contract to the blockchain.
+  
+  This is where we'll set the address of the
+  ERC20Burnable contract that will get stored to
+  the blockchain upon migration.
+  
+  Notice that the constructor function has the
+  same name as the smart contract.
+  
+  This is how Solidity knows that the function
+  is a constructor.
+  
+  Next, we create a function that will allow the
+  server to withdraw its monthly income.
+  
+  This function will only be callable by the
+  owner of the smart contract, which is the
+  server.
+  
+  Notice that the function has the same name as
+  the smart contract.
+  
+  This is how Solidity knows that the function
+  is a modifier.
+  
+  Then, we create a function that will slash the
+  bond by a given percentage if the server
+  misbehaves.
+  
+  To be used by the parent contracts, depending
+  on its pledges.
+  
+  The amount burned is 200 times the reward so
+  that even if the server repeatedly called
+  slash to recieve its bond early via the
+  reward, it would only end up with
+  approximately its monthly income.
+  
+  Finally, we create a function that will return
+  the last block where the server withdrew
+  funds.
+#+END_SRC

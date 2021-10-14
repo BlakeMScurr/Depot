@@ -1,0 +1,281 @@
+** Adjudicator.sol
+*** Contract
+#+BEGIN_SRC solidity -n :async :results verbatim code
+  //SPDX-License-Identifier: Unlicense
+  pragma solidity ^0.8.0;
+  
+  import "hardhat/console.sol";
+  import "./Bond.sol";
+  import "./Pledge/LivelinessPledge.sol";
+  import "./Pledge/RelayPledge.sol";
+  
+  /**
+   * @title The Adjudicator keeps a server lively and honest.
+   * @dev Using the adjudicator, users can force the server to store and relay
+   * messages. If 
+   */
+  contract Adjudicator is Bond {
+      LivelinessPledge livelinessPledge;
+      RelayPledge relayPledge;
+  
+      constructor(address erc20, LivelinessPledge _livelinessPledge, RelayPledge _relayPledge) Bond(erc20){
+          livelinessPledge = _livelinessPledge;
+          relayPledge = _relayPledge;
+      }
+  
+      /**
+       * @dev Slash 5% of the bond if the server isn't lively
+       */
+      mapping(bytes32 => bool) guiltyLivelyVerdicts;
+      function notLively(bytes32 requestHash) public {
+          if (!guiltyLivelyVerdicts[requestHash] && livelinessPledge.isBroken(requestHash)) {
+              super.slash(1, 20);
+              guiltyLivelyVerdicts[requestHash] = true;
+          }
+      }
+  
+      /**
+      * @dev Slash 20% of the bond if the server isn't honest
+      * i.e., it lies by ommiting to relay a store request
+      */
+      mapping(bytes32 => bool) guiltyRelayVerdicts;
+      function notHonest(Pledge.Receipt memory storeReceipt, Pledge.Receipt memory findReceipt) public {
+          bytes32 requestHash = keccak256(abi.encode(storeReceipt.request, findReceipt.request));
+          if (!guiltyRelayVerdicts[requestHash] && relayPledge.isBroken(storeReceipt, findReceipt)) {
+              super.slash(1, 5);
+              guiltyRelayVerdicts[requestHash] = true;
+          }
+      }
+  }
+#+END_SRC
+
+*** Explanation
+1
+#+BEGIN_SRC text -n :async :results verbatim code
+  The Adjudicator smart contract inherits from
+  the Bond smart contract.
+  
+  The Bond smart contract is a helper contract
+  that we'll use to ensure that the Adjudicator
+  is lively and honest.
+  
+  The Adjudicator smart contract has two
+  mappings that map a request hash to a boolean
+  value.
+  
+  These mappings will be used to keep track of
+  whether the server has been found to be lively
+  or honest.
+  
+  The Adjudicator smart contract has two
+  functions: notLively and notHonest.
+  
+  These functions will be called by the
+  liveliness and relay pledges, respectively.
+#+END_SRC
+
+2
+#+BEGIN_SRC text -n :async :results verbatim code
+  We start by importing the console.sol file
+  from the hardhat library.
+  
+  This is a library that contains a set of
+  helper functions that we can use to interact
+  with the blockchain.
+  
+  We then import the Bond contract from the
+  hardhat/contracts directory.
+  
+  This is a contract that we have written to
+  interact with the bond contract.
+  
+  We then import two other contracts from the
+  hardhat/contracts directory.
+  
+  These are the two pledge contracts that we
+  wrote to interact with the bond contract.
+  
+  Next, we declare the Adjudicator contract.
+  
+  This is a contract that we will deploy to the
+  blockchain.
+  
+  It inherits from the Bond contract, which is a
+  contract that we wrote to interact with the
+  bond contract.
+  
+  We then declare a mapping that will store
+  whether or not the server was lively for a
+  given request.
+  
+  We then declare a mapping that will store
+  whether or not the server was honest for a
+  given request.
+  
+  Finally, we create a constructor function that
+  will get called whenever we deploy the smart
+  contract to the blockchain.
+  
+  This is where we'll set the value of the
+  candidate state variable that will get stored
+  to the blockchain upon migration.
+  
+  Notice that the constructor function has the
+  same name as the smart contract.
+  
+  This is how Solidity knows that the function
+  is a constructor.
+#+END_SRC
+
+3
+#+BEGIN_SRC text -n :async :results verbatim code
+  We start with importing the console.sol file
+  from the hardhat library.
+  
+  This library contains the code that allows us
+  to interact with the blockchain.
+  
+  Next, we import the two pledge contracts that
+  we'll use to check the server's honesty.
+  
+  Then, we declare the Adjudicator contract.
+  
+  This contract inherits from the Bond contract,
+  which is a library contract that we'll use to
+  ensure that the server pays back its bond if
+  it breaks its promises.
+  
+  The Adjudicator contract has two mappings:
+  guiltyLivelyVerdicts and guiltyRelayVerdicts.
+  
+  These mappings will store whether the server
+  was found to be guilty of not being lively or
+  not being honest.
+  
+  The Adjudicator contract has two functions:
+  notLively and notHonest.
+  
+  These functions will be called by the two
+  pledge contracts that we imported.
+  
+  The notLively function will be called by the
+  LivelinessPledge contract if the server is
+  found to be not lively.
+  
+  The notHonest function will be called by the
+  RelayPledge contract if the server is found to
+  be not honest.
+#+END_SRC
+
+4
+#+BEGIN_SRC text -n :async :results verbatim code
+  We start by importing the console.sol file
+  that contains the Bond contract.
+  
+  We also import the two pledge contracts that
+  will be used to check if the server is lively
+  and honest.
+  
+  Next, we declare the Adjudicator contract.
+  
+  This contract inherits from the Bond contract,
+  which is a contract that allows us to slash
+  the bond of the server if it doesn't fulfill
+  its promises.
+  
+  We have to pass the erc20 address of the ERC20
+  token that will be used to pay the bond of the
+  server because the Bond contract requires it.
+  
+  Then, we declare the two mappings that will
+  store the verdicts of the server's behavior.
+  
+  These mappings will store whether the server
+  has committed a certain kind of offense.
+  
+  Finally, we declare the notLively and
+  notHonest functions.
+  
+  These functions will get called whenever the
+  server doesn't fulfill its promise.
+  
+  The notLively function will be called if the
+  server is not lively.
+  
+  The notHonest function will be called if the
+  server is not honest.
+#+END_SRC
+
+5
+#+BEGIN_SRC text -n :async :results verbatim code
+  We start by importing the console.sol file,
+  which contains the console functions that
+  we'll use to interact with the smart contract.
+  
+  We also import the Bond contract, which is a
+  helper contract that we'll use to handle the
+  slashing of the bond.
+  
+  We also import the two pledge contracts, which
+  are the pledge contracts that we'll use to
+  check the behavior of the server.
+  
+  Next, we declare the Adjudicator contract.
+  
+  This is the contract that we'll deploy to the
+  blockchain.
+  
+  It inherits from the Bond contract, which
+  means that it has the same functionality as
+  the Bond contract, but we can add more
+  functionality to it.
+  
+  The Adjudicator contract has three state
+  variables: guiltyLivelyVerdicts: This is a
+  mapping that stores whether the server has
+  been found to be not lively.
+  
+  guiltyRelayVerdicts: This is a mapping that
+  stores whether the server has been found to be
+  not honest.
+  
+  livelinessPledge: This is the pledge that
+  we'll use to check the server's livelyness.
+  
+  relayPledge: This is the pledge that we'll use
+  to check the server's honesty.
+  
+  The constructor function of the Adjudicator
+  contract is where we'll set the values of the
+  state variables.
+  
+  We'll pass in the erc20 contract as the first
+  parameter, which is the ERC20 token contract
+  that we'll use to pay for the bond.
+  
+  We'll also pass in the livelinessPledge and
+  relayPledge as the second and third
+  parameters, respectively, which are the pledge
+  contracts that we'll use to check the server's
+  behavior.
+  
+  The Adjudicator contract has two functions:
+  notLively and notHonest.
+  
+  These functions are called by the pledge
+  contracts when they detect that the server is
+  not lively or that the server is not honest,
+  respectively.
+  
+  The notLively function checks if the server
+  has been found to be not lively.
+  
+  If so, it slashes the bond by 5% and marks the
+  verdict in the mapping.
+  
+  The notHonest function checks if the server
+  has been found to be not honest.
+  
+  If so, it slashes the bond by 20% and marks
+  the verdict in the mapping.
+#+END_SRC
