@@ -1,7 +1,7 @@
 // core logic for the server
 import { ethers } from 'ethers';
 import * as lpArtifact from "../artifacts/contracts/Pledge/LivelinessPledge.sol/LivelinessPledge.json";
-import { findRequest, newReceipt, Receipt, Request } from '../client/Requests';
+import { findRequest, newReceipt, newRequest, Receipt, Request } from '../client/Requests';
 
 const lp = new ethers.utils.Interface(lpArtifact.abi);
 
@@ -32,16 +32,19 @@ export async function validateRequest(siloRequest: any, provider: ethers.provide
 
 export class memoryDB {
     // Map from user to blockNumber to ordered list of receipts (ordered by message text)
-    storage: Map<string, Map<number, Array<[ethers.Bytes, Receipt]>>>;
+    storage: Map<string, Map<string, Array<[ethers.Bytes, Receipt]>>>;
+    // Receipt used to respond to find requests that don't find anything
+    emptyReceipt: Receipt;
 
-    constructor() {
+    constructor(emptyReceipt: Receipt) {
         this.storage = new Map()
+        this.emptyReceipt = emptyReceipt;
     }
 
-    store(receipt: Receipt, user: string, blockNumber: number, message: ethers.Bytes) {
+    store(receipt: Receipt, user: string, blockNumber: string, message: ethers.Bytes) {
         // find the right user/block part of storage
         if (!this.storage.get(user)) this.storage.set(user, new Map())
-        let userMap: Map<number, Array<[ethers.Bytes, Receipt]>> = this.storage.get(user)!;
+        let userMap: Map<string, Array<[ethers.Bytes, Receipt]>> = this.storage.get(user)!;
         if (!userMap.get(blockNumber)) userMap.set(blockNumber, [])
         let messages = userMap.get(blockNumber)!;
 
@@ -51,7 +54,20 @@ export class memoryDB {
     }
 
     find(rq: findRequest):Receipt {
-        
+        let userMap = this.storage.get(rq.byUser);
+        if (userMap) {
+            let messages = userMap.get(rq.fromBlockNumber.toString())
+            if (messages) {
+                for (let i = messages.length -1; i >= 0; i--) {
+                    const m = messages[i];
+                    // TODO: is this equivalent to prefix searching through bytes in the contract? Probably not.
+                    if (m[0].toString().startsWith(rq.prefix.toString())) {
+                        return m[1]
+                    }
+                }
+            }
+        }
+        return this.emptyReceipt;
     }
 }
 
