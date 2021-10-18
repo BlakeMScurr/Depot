@@ -18,13 +18,13 @@ describe("RelayPledge", function () {
     reader = signers[3];
     serverAddress = await server.getAddress();
 
-    const abiHack = await new ABIHack__factory(signers[0]).deploy();
+    const abiHack = await new ABIHack__factory(server).deploy();
 
-    const pledge = await new Pledge__factory(signers[0]).deploy();
+    const pledge = await new Pledge__factory(server).deploy();
     const pledgeLibrary = {"contracts/Pledge/Pledge.sol:Pledge": pledge.address}
 
-    relayPledge = await new RelayPledge__factory(pledgeLibrary, signers[0]).deploy(abiHack.address, serverAddress);
-    exposedRelayPledge = await new ExposedRelayPledge__factory(pledgeLibrary, signers[0]).deploy(abiHack.address, serverAddress);
+    relayPledge = await new RelayPledge__factory(pledgeLibrary, server).deploy(abiHack.address, serverAddress);
+    exposedRelayPledge = await new ExposedRelayPledge__factory(pledgeLibrary, server).deploy(abiHack.address, serverAddress);
   })
 
   describe("Pledge Broken", () => {

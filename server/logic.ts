@@ -1,5 +1,6 @@
 // core logic for the server
 import { ethers } from 'ethers';
+import { Client, ClientConfig } from 'pg';
 import * as lpArtifact from "../artifacts/contracts/Pledge/LivelinessPledge.sol/LivelinessPledge.json";
 import { findRequest, newReceipt, newRequest, Receipt, Request } from '../client/Requests';
 
@@ -30,71 +31,37 @@ export async function validateRequest(siloRequest: any, provider: ethers.provide
     }
 }
 
-export class memoryDB {
-    // Map from user to blockNumber to ordered list of receipts (ordered by message text)
-    storage: Map<string, Map<string, Array<[ethers.Bytes, Receipt]>>>;
-    // Receipt used to respond to find requests that don't find anything
-    emptyReceipt: Receipt;
-
-    constructor(emptyReceipt: Receipt) {
-        this.storage = new Map()
-        this.emptyReceipt = emptyReceipt;
-    }
-
-    store(receipt: Receipt, user: string, blockNumber: string, message: ethers.Bytes) {
-        // find the right user/block part of storage
-        if (!this.storage.get(user)) this.storage.set(user, new Map())
-        let userMap: Map<string, Array<[ethers.Bytes, Receipt]>> = this.storage.get(user)!;
-        if (!userMap.get(blockNumber)) userMap.set(blockNumber, [])
-        let messages = userMap.get(blockNumber)!;
-
-        // add request in order
-        let i = sortedIndex(message, messages)
-        messages.splice(i, 0, [message, receipt])
-    }
-
-    find(rq: findRequest):Receipt {
-        let userMap = this.storage.get(rq.byUser);
-        if (userMap) {
-            let messages = userMap.get(rq.fromBlockNumber.toString())
-            if (messages) {
-                for (let i = messages.length -1; i >= 0; i--) {
-                    const m = messages[i];
-                    // TODO: is this equivalent to prefix searching through bytes in the contract? Probably not.
-                    if (m[0].toString().startsWith(rq.prefix.toString())) {
-                        return m[1]
-                    }
-                }
-            }
-        }
-        return this.emptyReceipt;
-    }
+export interface SiloDatabase {
+    store(rq: Request):Promise<Receipt>
+    find(rq: findRequest):Promise<Receipt>
+    nullReceipt():Receipt
 }
 
-// credit https://stackoverflow.com/a/21822316/7371580
-function sortedIndex(message: ethers.Bytes, list: Array<[ethers.Bytes, Receipt]>) {
-    var low = 0,
-        high = list.length;
-
-    while (low < high) {
-        var mid = (low + high) >>> 1;
-        if (lt(list[mid][0], message)) low = mid + 1;
-        else high = mid;
-    }
-    return low;
+export async function makeSiloDB(config: ClientConfig, signer: ethers.Signer):Promise<SiloDatabase> {
+    const client = new Client(config)
+    let nullReceipt = await newReceipt(signer, await newRequest(signer, "null", ethers.utils.arrayify(0), 0), ethers.utils.arrayify(0))
+    return new postgres(client, signer, nullReceipt)
 }
 
-function lt(a: ethers.Bytes, b: ethers.Bytes):boolean {
-    if (a.length != b.length) return a.length < b.length
-    for (let i = 0; i < a.length; i++) {
-        if (a[i] != b[i]) {
-            return a[i] < b[i];
-        }
-    }
-    return false
-}
+class postgres {
+    private _nullReceipt: Receipt
+    signer: ethers.Signer;
 
-export interface db {
-    store(rq: Request):Receipt
-    find(rq: findRequest):Receipt
+    constructor(client: Client, signer: ethers.Signer, nullReceipt: Receipt) {
+        this._nullReceipt = nullReceipt;
+        this.signer = signer;
+    }
+
+    async store(rq: Request):Promise<Receipt> {
+        let receipt = newReceipt(this.signer, rq, ethers.utils.arrayify(0))
+        return this._nullReceipt
+    }
+
+    async find(rq: findRequest):Promise<Receipt> {
+        return this._nullReceipt
+    }
+    
+    nullReceipt():Receipt {
+        return this._nullReceipt
+    }
 }
