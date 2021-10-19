@@ -1,21 +1,20 @@
 import * as ethers from "ethers";
 
 export function receiptFromJSON (json: any) {
-  // TODO: why does our parsing need fixing up before being usable?
-  let fixup = (thing: any) => {
+  // TODO: use custom JSON deserializer that handles Uint8Arrays
+  let fixUint8Array = (thing: any) => {
     let entries: [string, string][] = Object.entries(thing)
-    let str = ethers.utils.toUtf8String(entries.map((v) => {return parseInt(v[1])}))
-    return ethers.utils.toUtf8Bytes(str)
+    return Uint8Array.from(entries.map((v) => { return parseInt(v[1])}))
   } 
   let receipt = new Receipt(
     new Request(
-      fixup(json.request.meta),
-      fixup(json.request.message),
+      fixUint8Array(json.request.meta),
+      fixUint8Array(json.request.message),
       json.request.user,
       json.request.blockNumber,
       json.request.signature,
     ),
-    fixup(json.response),
+    fixUint8Array(json.response),
     json.signature,
   )
   return receipt
