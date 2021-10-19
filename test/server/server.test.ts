@@ -8,6 +8,7 @@ import { handleRequest, makeSiloDB, SiloDatabase, validateRequest } from "../../
 import { findRequest, newReceipt, newRequest, Receipt, Request } from "../../client/Requests"
 import * as e from "ethers";
 import { ABIHack__factory, Pledge__factory, RelayPledge, RelayPledge__factory } from "../../typechain";
+import { Client } from "pg";
 
 describe("Server", () => {
     let server: e.Signer;
@@ -66,10 +67,16 @@ describe("Server", () => {
         let relayPledge: RelayPledge;
         before(async () => {
             // TODO: make test db in the style of https://stackoverflow.com/a/61725901/7371580
+            let config = { database: "testsilo" }
             db = await makeSiloDB(
-                { database: "testsilo" },
+                config,
                 server,
             )
+
+            // TODO: simplify so that we don't make two clients (one here and one inside makeSiloDB)
+            const client = new Client(config)
+            await client.connect()
+            await client.query('TRUNCATE TABLE receipts')
 
             hello = await newRequest(storer, "store", ethers.utils.toUtf8Bytes("Hello!"), 1)
             helloAgain = await newRequest(storer, "store", ethers.utils.toUtf8Bytes("Hello again!"), 2)
@@ -124,22 +131,30 @@ describe("Server", () => {
             ).to.deep.equal(db.nullReceipt())
         })
 
-        it("Should find the middle of two messages", async () => {
-            let fr = new findRequest(1, "Hello!", await storer.getAddress())
+        it("Should find the first of two cross block messages", async () => {
+            let testQuery = async (fr: findRequest) => {
+                let findReceipt = await newReceipt(server, await newRequest(server, "find", fr.encodeAsBytes(), 2), hello.encodeAsBytes())
+                expect(
+                    await db.find(fr)
+                ).to.deep.equal(findReceipt)
 
-            let findReceipt = await newReceipt(server, await newRequest(server, "find", fr.encodeAsBytes(), 2), hello.encodeAsBytes())
-            expect(
-                await db.find(fr)
-            ).to.deep.equal(findReceipt)
+                expect(await relayPledge.isBroken(
+                    await newReceipt(server, hello, ethers.utils.arrayify(0)),
+                    findReceipt,
+                )).to.equal(false);
+            }
 
-            expect(
-                await db.find(new findRequest(1, "Hello", await storer.getAddress()))
-            ).to.deep.equal(findReceipt)
+            // from the target message
+            await testQuery(new findRequest(1, "Hello", await storer.getAddress()))
 
-            expect(await relayPledge.isBroken(
-                await newReceipt(server, hello, ethers.utils.arrayify(0)),
-                findReceipt,
-            )).to.equal(false);
+            // from later in the earlier block
+            await testQuery(new findRequest(1, "Hello!", await storer.getAddress()))
+
+            // from earlier in the later block
+            await testQuery(new findRequest(2, "", await storer.getAddress()))
+
+            // from immediately before the message in the later block
+            await testQuery(new findRequest(2, "Hello again ", await storer.getAddress()))
         })
     })
 });

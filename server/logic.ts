@@ -62,11 +62,19 @@ class postgres {
     }
 
     async find(rq: findRequest):Promise<Receipt> {
-        let signedRequest = newRequest(this.signer, "find", rq.encodeAsBytes(), ethers.BigNumber.from(rq.fromBlockNumber).add(1))
+        let signedRequest = newRequest(this.signer, "find", rq.encodeAsBytes(), ethers.BigNumber.from(rq.fromBlockNumber))
         let receipts = await this.client.query(
-            'SELECT receipt FROM receipts WHERE userAddress = $1 AND block <= $2',
-            [rq.byUser, ethers.BigNumber.from(rq.fromBlockNumber).toBigInt()])
-        return receiptFromJSON(receipts.rows[1].receipt);
+            `SELECT receipt FROM receipts
+            WHERE userAddress = $1
+            AND block = (
+                SELECT MAX(block) FROM receipts
+                WHERE block <= $2
+            )`,
+            [rq.byUser, ethers.BigNumber.from(rq.fromBlockNumber).toBigInt()]
+        )
+
+        if (receipts.rows.length == 0) return this._nullReceipt
+        return receiptFromJSON(receipts.rows[0].receipt);
     }
     
     nullReceipt():Receipt {

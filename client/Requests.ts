@@ -5,7 +5,7 @@ export function receiptFromJSON (json: any) {
   let fixUint8Array = (thing: any) => {
     let entries: [string, string][] = Object.entries(thing)
     return Uint8Array.from(entries.map((v) => { return parseInt(v[1])}))
-  } 
+  }
   let receipt = new Receipt(
     new Request(
       fixUint8Array(json.request.meta),
