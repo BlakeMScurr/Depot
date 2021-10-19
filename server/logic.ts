@@ -39,26 +39,34 @@ export interface SiloDatabase {
 
 export async function makeSiloDB(config: ClientConfig, signer: ethers.Signer):Promise<SiloDatabase> {
     const client = new Client(config)
+    await client.connect()
     let nullReceipt = await newReceipt(signer, await newRequest(signer, "null", ethers.utils.arrayify(0), 0), ethers.utils.arrayify(0))
     return new postgres(client, signer, nullReceipt)
 }
 
 class postgres {
     private _nullReceipt: Receipt
-    signer: ethers.Signer;
+    private signer: ethers.Signer;
+    private client: Client;
 
     constructor(client: Client, signer: ethers.Signer, nullReceipt: Receipt) {
         this._nullReceipt = nullReceipt;
+        this.client = client;
         this.signer = signer;
     }
 
     async store(rq: Request):Promise<Receipt> {
-        let receipt = newReceipt(this.signer, rq, ethers.utils.arrayify(0))
-        return this._nullReceipt
+        let receipt = await newReceipt(this.signer, rq, ethers.utils.arrayify(0))
+        await this.client.query('INSERT INTO receipts (userAddress, message, block, receipt) VALUES ($1, $2, $3, $4)', [receipt.request.user, receipt.request.message, receipt.request.blockNumber, receipt])
+        return receipt
     }
 
     async find(rq: findRequest):Promise<Receipt> {
-        return this._nullReceipt
+        let signedRequest = newRequest(this.signer, "find", rq.encodeAsBytes(), ethers.BigNumber.from(rq.fromBlockNumber).add(1))
+        let receipts = await this.client.query(
+            'SELECT receipt FROM receipts WHERE userAddress = $1 AND block <= $2',
+            [rq.byUser, ethers.BigNumber.from(rq.fromBlockNumber).toBigInt()])
+        return receipts.rows[1].receipt;
     }
     
     nullReceipt():Receipt {

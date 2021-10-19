@@ -11,14 +11,12 @@ import { ABIHack__factory, Pledge__factory, RelayPledge, RelayPledge__factory } 
 
 describe("Server", () => {
     let server: e.Signer;
-    let finder: e.Signer;
     let storer: e.Signer;
     let provider: e.providers.Provider;
     before(async () => {
         let signers = await ethers.getSigners();
         server = signers[0]
-        finder = signers[1]
-        storer = signers[2]
+        storer = signers[1]
         provider = await ethers.provider;
     })
 
@@ -73,8 +71,8 @@ describe("Server", () => {
                 server,
             )
 
-            hello = await newRequest(finder, "find", ethers.utils.toUtf8Bytes("Hello!"), 1)
-            helloAgain = await newRequest(finder, "find", ethers.utils.toUtf8Bytes("Hello again!"), 2)
+            hello = await newRequest(storer, "store", ethers.utils.toUtf8Bytes("Hello!"), 1)
+            helloAgain = await newRequest(storer, "store", ethers.utils.toUtf8Bytes("Hello again!"), 2)
 
             const abiHack = await new ABIHack__factory(server).deploy();
 
@@ -86,22 +84,22 @@ describe("Server", () => {
 
         it("Should find nothing if nothing is stored", async () => {
             expect(
-                await db.find(new findRequest(5, "", await server.getAddress(), ethers.utils.arrayify(0)))
+                await db.find(new findRequest(5, "", await storer.getAddress()))
             ).to.deep.equal(db.nullReceipt())
         })
 
         it("Should find the most recent of two stored messages", async () => {
             let h = await db.store(hello)
             let ha = await db.store(helloAgain)
-            expect(h).to.deep.equal(newReceipt(server, hello, ethers.utils.arrayify(0)))
-            expect(ha).to.deep.equal(newReceipt(server, helloAgain, ethers.utils.arrayify(0)))
+            expect(h).to.deep.equal(await newReceipt(server, hello, ethers.utils.arrayify(0)))
+            expect(ha).to.deep.equal(await newReceipt(server, helloAgain, ethers.utils.arrayify(0)))
 
-            let fr = new findRequest(3, "", await server.getAddress(), ethers.utils.arrayify(0))
+            let fr = new findRequest(3, "", await storer.getAddress())
             let findReceipt = await newReceipt(server, await newRequest(server, "find", fr.encodeAsBytes(), 4), helloAgain.encodeAsBytes())
 
             expect(
                 await db.find(fr)
-            ).to.deep.equal(findReceipt)
+            ).to.eql(JSON.parse(JSON.stringify(ha)))
 
             expect(await relayPledge.isBroken(
                 h,
@@ -116,18 +114,18 @@ describe("Server", () => {
 
         it("Should not find messages from later blocks", async () => {
             expect(
-                await db.find(new findRequest(0, "", await server.getAddress(), ethers.utils.arrayify(0)))
+                await db.find(new findRequest(0, "", await storer.getAddress()))
             ).to.deep.equal(db.nullReceipt())
         })
 
         it("Should not find messages from later in a block", async () => {
             expect(
-                await db.find(new findRequest(1, "Hellp", await server.getAddress(), ethers.utils.arrayify(0)))
+                await db.find(new findRequest(1, "Hellp", await storer.getAddress()))
             ).to.deep.equal(db.nullReceipt())
         })
 
         it("Should find the middle of two messages", async () => {
-            let fr = new findRequest(1, "Hello!", await server.getAddress(), ethers.utils.arrayify(0))
+            let fr = new findRequest(1, "Hello!", await storer.getAddress())
 
             let findReceipt = await newReceipt(server, await newRequest(server, "find", fr.encodeAsBytes(), 2), hello.encodeAsBytes())
             expect(
@@ -135,7 +133,7 @@ describe("Server", () => {
             ).to.deep.equal(findReceipt)
 
             expect(
-                await db.find(new findRequest(1, "Hello", await server.getAddress(), ethers.utils.arrayify(0)))
+                await db.find(new findRequest(1, "Hello", await storer.getAddress()))
             ).to.deep.equal(findReceipt)
 
             expect(await relayPledge.isBroken(
@@ -143,6 +141,5 @@ describe("Server", () => {
                 findReceipt,
             )).to.equal(false);
         })
-
     })
 });

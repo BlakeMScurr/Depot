@@ -38,7 +38,7 @@ export class Request {
   blockNumber: ethers.BigNumberish;
   signature: ethers.BytesLike;
 
-  constructor(meta: ethers.BytesLike, message: ethers.BytesLike, user: string, blockNumber: number, signature: string) {
+  constructor(meta: ethers.BytesLike, message: ethers.BytesLike, user: string, blockNumber: ethers.BigNumberish, signature: string) {
     this.meta = meta;
     this.message = message;
     this.user = user;
@@ -83,7 +83,7 @@ function encodeMessage(meta: ethers.BytesLike, message: ethers.BytesLike, user: 
   return ethers.utils.arrayify(hashed);
 }
 
-export async function newRequest(signer: ethers.Signer, meta: string, message: ethers.BytesLike, blockNumber: number):Promise<Request> {
+export async function newRequest(signer: ethers.Signer, meta: string, message: ethers.BytesLike, blockNumber: ethers.BigNumberish):Promise<Request> {
   let user = await signer.getAddress();
   let _meta = ethers.utils.toUtf8Bytes(meta);
 
