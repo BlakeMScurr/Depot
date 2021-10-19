@@ -1,5 +1,26 @@
 import * as ethers from "ethers";
 
+export function receiptFromJSON (json: any) {
+  // TODO: why does our parsing need fixing up before being usable?
+  let fixup = (thing: any) => {
+    let entries: [string, string][] = Object.entries(thing)
+    let str = ethers.utils.toUtf8String(entries.map((v) => {return parseInt(v[1])}))
+    return ethers.utils.toUtf8Bytes(str)
+  } 
+  let receipt = new Receipt(
+    new Request(
+      fixup(json.request.meta),
+      fixup(json.request.message),
+      json.request.user,
+      json.request.blockNumber,
+      json.request.signature,
+    ),
+    fixup(json.response),
+    json.signature,
+  )
+  return receipt
+}
+
 export class Receipt {
   request: Request;
   response: ethers.BytesLike;

@@ -99,7 +99,7 @@ describe("Server", () => {
 
             expect(
                 await db.find(fr)
-            ).to.eql(JSON.parse(JSON.stringify(ha)))
+            ).to.eql(ha)
 
             expect(await relayPledge.isBroken(
                 h,

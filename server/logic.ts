@@ -2,7 +2,7 @@
 import { ethers } from 'ethers';
 import { Client, ClientConfig } from 'pg';
 import * as lpArtifact from "../artifacts/contracts/Pledge/LivelinessPledge.sol/LivelinessPledge.json";
-import { findRequest, newReceipt, newRequest, Receipt, Request } from '../client/Requests';
+import { findRequest, newReceipt, newRequest, Receipt, receiptFromJSON, Request } from '../client/Requests';
 
 const lp = new ethers.utils.Interface(lpArtifact.abi);
 
@@ -66,7 +66,7 @@ class postgres {
         let receipts = await this.client.query(
             'SELECT receipt FROM receipts WHERE userAddress = $1 AND block <= $2',
             [rq.byUser, ethers.BigNumber.from(rq.fromBlockNumber).toBigInt()])
-        return receipts.rows[1].receipt;
+        return receiptFromJSON(receipts.rows[1].receipt);
     }
     
     nullReceipt():Receipt {
