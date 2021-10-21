@@ -298,30 +298,19 @@ describe("RelayPledge", function () {
 
   describe("Compare", () => {
     it("Compares messages", async function () {
-      let orderedMessages = [
-        ethers.utils.toUtf8Bytes(""),
-        ethers.utils.toUtf8Bytes("0"),
-        ethers.utils.toUtf8Bytes("1"),
-        ethers.utils.toUtf8Bytes("00"),
-        ethers.utils.toUtf8Bytes("01"),
-        ethers.utils.toUtf8Bytes("0a"),
-        ethers.utils.toUtf8Bytes("0b"),
-        ethers.utils.toUtf8Bytes("a0"),
-        ethers.utils.toUtf8Bytes("b0"),
-        ethers.utils.toUtf8Bytes("000"),
-      ]
+      let om = orderedMessages()
   
-      for (var i = 0; i < orderedMessages.length; i++) {
-        expect(await exposedRelayPledge._compare(orderedMessages[i], orderedMessages[i])).to.equal(0);
-        for (var j = 0; j < orderedMessages.length; j++) {
+      for (var i = 0; i < om.length; i++) {
+        expect(await exposedRelayPledge._compare(om[i], om[i])).to.equal(0);
+        for (var j = 0; j < om.length; j++) {
           if (i < j) {
-            expect(await exposedRelayPledge._compare(orderedMessages[i], orderedMessages[j])).to.be.lessThan(0);
-            expect(await exposedRelayPledge._compare(orderedMessages[j], orderedMessages[i])).to.be.greaterThan(0);
+            expect(await exposedRelayPledge._compare(om[i], om[j])).to.be.lessThan(0);
+            expect(await exposedRelayPledge._compare(om[j], om[i])).to.be.greaterThan(0);
           }
         }
       }
   
-      expect(await exposedRelayPledge._compare(orderedMessages[0], orderedMessages[1])).to.equal(-1);
+      expect(await exposedRelayPledge._compare(om[0], om[1])).to.equal(-1);
     });
   
     it("Finds earlier messages", async () => {
@@ -346,3 +335,18 @@ describe("RelayPledge", function () {
     })
   })
 });
+
+export function orderedMessages() {
+  return [
+    ethers.utils.toUtf8Bytes(""),
+    ethers.utils.toUtf8Bytes("0"),
+    ethers.utils.toUtf8Bytes("1"),
+    ethers.utils.toUtf8Bytes("00"),
+    ethers.utils.toUtf8Bytes("01"),
+    ethers.utils.toUtf8Bytes("0a"),
+    ethers.utils.toUtf8Bytes("0b"),
+    ethers.utils.toUtf8Bytes("a0"),
+    ethers.utils.toUtf8Bytes("b0"),
+    ethers.utils.toUtf8Bytes("000"),
+  ]
+}

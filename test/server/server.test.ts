@@ -4,11 +4,12 @@ import * as chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised.default)
 
 import { ethers } from "hardhat";
-import { handleRequest, makeSiloDB, SiloDatabase, validateRequest } from "../../server/logic";
+import { compareMessages, handleRequest, makeSiloDB, SiloDatabase, validateRequest } from "../../server/logic";
 import { findRequest, newReceipt, newRequest, Receipt, Request } from "../../client/Requests"
 import * as e from "ethers";
 import { ABIHack__factory, Pledge__factory, RelayPledge, RelayPledge__factory } from "../../typechain";
 import { Client } from "pg";
+import { orderedMessages } from "../contracts/Pledge/RelayPledge.test";
 
 describe("Server", () => {
     let server: e.Signer;
@@ -96,25 +97,25 @@ describe("Server", () => {
         })
 
         it("Should find the most recent of two stored messages", async () => {
-            let h = await db.store(hello)
-            let ha = await db.store(helloAgain)
-            expect(h).to.deep.equal(await newReceipt(server, hello, ethers.utils.arrayify(0)))
-            expect(ha).to.deep.equal(await newReceipt(server, helloAgain, ethers.utils.arrayify(0)))
+            let hStoreReceipt = await db.store(hello)
+            let haStoreReceipt = await db.store(helloAgain)
+            expect(hStoreReceipt).to.deep.equal(await newReceipt(server, hello, ethers.utils.arrayify(0)))
+            expect(haStoreReceipt).to.deep.equal(await newReceipt(server, helloAgain, ethers.utils.arrayify(0)))
 
             let fr = new findRequest(3, "", await storer.getAddress())
             let findReceipt = await newReceipt(server, await newRequest(server, "find", fr.encodeAsBytes(), 4), helloAgain.encodeAsBytes())
 
             expect(
                 await db.find(fr)
-            ).to.eql(ha)
+            ).to.eql(haStoreReceipt)
 
             expect(await relayPledge.isBroken(
-                h,
+                hStoreReceipt,
                 findReceipt,
             )).to.equal(false);
 
             expect(await relayPledge.isBroken(
-                ha,
+                haStoreReceipt,
                 findReceipt,
             )).to.equal(false);
         })
@@ -133,28 +134,45 @@ describe("Server", () => {
 
         it("Should find the first of two cross block messages", async () => {
             let testQuery = async (fr: findRequest) => {
-                let findReceipt = await newReceipt(server, await newRequest(server, "find", fr.encodeAsBytes(), 2), hello.encodeAsBytes())
+                let storeReceipt = await newReceipt(server, hello, ethers.utils.arrayify(0))
+                let findReceipt = await newReceipt(server, await newRequest(server, "find", fr.encodeAsBytes(), 3), hello.encodeAsBytes())
                 expect(
                     await db.find(fr)
-                ).to.deep.equal(findReceipt)
+                ).to.deep.equal(storeReceipt)
 
                 expect(await relayPledge.isBroken(
-                    await newReceipt(server, hello, ethers.utils.arrayify(0)),
+                    storeReceipt,
                     findReceipt,
                 )).to.equal(false);
             }
 
             // from the target message
-            await testQuery(new findRequest(1, "Hello", await storer.getAddress()))
-
-            // from later in the earlier block
             await testQuery(new findRequest(1, "Hello!", await storer.getAddress()))
+
+            
+            // from later in the earlier block
+            await testQuery(new findRequest(1, "Hello!!", await storer.getAddress()))
 
             // from earlier in the later block
             await testQuery(new findRequest(2, "", await storer.getAddress()))
 
             // from immediately before the message in the later block
             await testQuery(new findRequest(2, "Hello again ", await storer.getAddress()))
+        })
+    })
+
+    describe("Offchain comparison", () => {
+        it("Should compare exactly as the onchain function does", async () => {
+            let om = orderedMessages()
+            for (var i = 0; i < om.length; i++) {
+                expect(compareMessages(om[i], om[i])).to.equal(0);
+                for (var j = 0; j < om.length; j++) {
+                  if (i < j) {
+                    expect(compareMessages(om[i], om[j])).to.be.lessThan(0);
+                    expect(compareMessages(om[j], om[i])).to.be.greaterThan(0);
+                  }
+                }
+              }
         })
     })
 });

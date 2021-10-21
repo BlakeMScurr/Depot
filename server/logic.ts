@@ -61,23 +61,69 @@ class postgres {
         return receipt
     }
 
+    // finds all receipts from a given block and finds the most recent receipt from that block before a given point
+    // if there is no message before that point, find all messages from the last block with messages, and return the most recent
     async find(rq: findRequest):Promise<Receipt> {
         let signedRequest = newRequest(this.signer, "find", rq.encodeAsBytes(), ethers.BigNumber.from(rq.fromBlockNumber))
-        let receipts = await this.client.query(
+        let sameBlock = await this.client.query(
+            `SELECT receipt FROM receipts
+            WHERE userAddress = $1
+            AND block = $2`,
+            [rq.byUser, ethers.BigNumber.from(rq.fromBlockNumber).toBigInt()]
+        )
+
+        if (sameBlock.rows.length != 0) {
+            // find all receipts before (or at) the target block
+            let filtered = sameBlock.rows.map((row) => {
+                return receiptFromJSON(row.receipt)
+            }).filter((receipt) => {
+                return compareMessages(receipt.request.message, rq.fromMessage) <= 0
+            })
+
+            // return the highest receipt
+            if (filtered.length > 0) {
+                return filtered.reduce((p, v) => {
+                    return compareMessages(p.request.message, v.request.message) > 0 ? p : v
+                })
+            }
+        }
+
+        let previousBlock = await this.client.query(
             `SELECT receipt FROM receipts
             WHERE userAddress = $1
             AND block = (
                 SELECT MAX(block) FROM receipts
-                WHERE block <= $2
+                WHERE block < $2
             )`,
             [rq.byUser, ethers.BigNumber.from(rq.fromBlockNumber).toBigInt()]
         )
 
-        if (receipts.rows.length == 0) return this._nullReceipt
-        return receiptFromJSON(receipts.rows[0].receipt);
+
+        if (previousBlock.rows.length != 0) {
+            return previousBlock.rows.map((row) => {
+                return receiptFromJSON(row.receipt)
+            }).reduce((p, v) => {
+                return compareMessages(p.request.message, v.request.message) > 0 ? p : v
+            })
+            return receiptFromJSON(previousBlock.rows[0].receipt);
+        }
+        return this._nullReceipt
     }
     
     nullReceipt():Receipt {
         return this._nullReceipt
     }
+}
+
+export function compareMessages(a: ethers.BytesLike, b: ethers.BytesLike):number {
+    if (a.length != b.length) {
+        return a.length < b.length? -1 : 1;
+    }
+
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] != b[i]) {
+            return a[i] < b[i] ? -1: 1;
+        }
+    }
+    return 0;
 }
