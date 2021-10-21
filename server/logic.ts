@@ -64,12 +64,17 @@ class postgres {
     // finds all receipts from a given block and finds the most recent receipt from that block before a given point
     // if there is no message before that point, find all messages from the last block with messages, and return the most recent
     async find(rq: findRequest):Promise<Receipt> {
-        let signedRequest = newRequest(this.signer, "find", rq.encodeAsBytes(), ethers.BigNumber.from(rq.fromBlockNumber))
+        let blockNum = ethers.BigNumber.from(rq.fromBlockNumber)
+        if (blockNum.gt(ethers.BigNumber.from("9223372036854775807"))) {
+            return Promise.reject(new Error(`Block number ${blockNum} overflows Postgres's bigint type`))
+        }
+
+        let signedRequest = newRequest(this.signer, "find", rq.encodeAsBytes(), blockNum)
         let sameBlock = await this.client.query(
             `SELECT receipt FROM receipts
             WHERE userAddress = $1
             AND block = $2`,
-            [rq.byUser, ethers.BigNumber.from(rq.fromBlockNumber).toBigInt()]
+            [rq.byUser, blockNum.toBigInt()]
         )
 
         if (sameBlock.rows.length != 0) {
@@ -95,7 +100,7 @@ class postgres {
                 SELECT MAX(block) FROM receipts
                 WHERE block < $2
             )`,
-            [rq.byUser, ethers.BigNumber.from(rq.fromBlockNumber).toBigInt()]
+            [rq.byUser, blockNum.toBigInt()]
         )
 
         if (previousBlock.rows.length != 0) {

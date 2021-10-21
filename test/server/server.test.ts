@@ -176,8 +176,17 @@ describe("Server", () => {
             
             // from later message
             await testQuery(new findRequest(2, "Final message here", await storer.getAddress()), finalMessage)
+        })
 
-
+        it("Should catch integer overflows", async () => {
+            let serverAddress = await await server.getAddress()
+            return expect(
+                db.find(new findRequest(
+                    ethers.BigNumber.from("9223372036854775808"),
+                    "",
+                    serverAddress
+                ))
+            ).to.be.rejectedWith("Block number 9223372036854775808 overflows Postgres's bigint type")
         })
     })
 
