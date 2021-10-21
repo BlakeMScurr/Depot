@@ -117,26 +117,23 @@ export class findRequest {
   fromBlockNumber: ethers.BigNumberish;
   fromMessage: ethers.BytesLike;
   byUser: string;
-  prefix: ethers.BytesLike;
 
-  constructor(fromBlockNumber: ethers.BigNumberish, fromMessage: string, byUser: string, prefix?: ethers.BytesLike) {
+  constructor(fromBlockNumber: ethers.BigNumberish, fromMessage: string, byUser: string) {
     this.fromBlockNumber = fromBlockNumber;
     this.fromMessage = ethers.utils.toUtf8Bytes(fromMessage);
     this.byUser = byUser;
-    this.prefix = prefix ? prefix : ethers.utils.arrayify("0x");
   }
 
   encodeAsBytes() {
     return ethers.utils.defaultAbiCoder.encode(
       [
-        "tuple(uint256, bytes, address, bytes)",
+        "tuple(uint256, bytes, address)",
       ],
       [
         [
           this.fromBlockNumber,
           this.fromMessage,
           this.byUser,
-          this.prefix,
         ]
       ]
     ) 

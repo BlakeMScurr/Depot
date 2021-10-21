@@ -120,13 +120,6 @@ describe("RelayPledge", function () {
       )}).not.to.throw()
     })
 
-    it("Allows valid prefixes", async () => {
-      expect(async () => {await exposedRelayPledge._validateReceipts(
-        await storeReceipt(),
-        await findReceipt(new findRequest(1, "1", await poster.getAddress(), ethers.utils.toUtf8Bytes("1")).encodeAsBytes()), // "1" utf8 encoded is the prefix and the whole message
-      )}).not.to.throw()
-    })
-
     it("Rejects invalid meta fields", async () => {
       let wrongStore = await storeReceipt()
       wrongStore.request.meta = ethers.utils.toUtf8Bytes("wrong")
@@ -217,13 +210,6 @@ describe("RelayPledge", function () {
         find,
       )).to.be.revertedWith("Find requests must refer to the past, since the server can't know what might be stored in the future")
     })
-
-    it("Rejects messages without the specified prefix", async () => {
-      await expect(exposedRelayPledge._validateReceipts(
-        await storeReceipt(),
-        await findReceipt(new findRequest(1, "0", await poster.getAddress(), ethers.utils.toUtf8Bytes("someprefix")).encodeAsBytes()),
-      )).to.be.revertedWith("Message lacks the needed prefix")
-    })
   })
 
   describe("Valid Relay", () => {
@@ -236,12 +222,6 @@ describe("RelayPledge", function () {
     it("Allows exact relays", async () => {
       let relayed = await newRequest(poster, "store", ethers.utils.toUtf8Bytes("0"), 1)
       let find = new findRequest(1, "0", await poster.getAddress())
-      expect((await exposedRelayPledge._validRelay(find, relayed.encodeAsBytes()))[1]).to.equal(true);
-    })
-
-    it("Allows valid prefixes", async () => {
-      let relayed = await newRequest(poster, "store", ethers.utils.toUtf8Bytes("prefix:yo"), 1)
-      let find = new findRequest(2, "0", await poster.getAddress(), ethers.utils.toUtf8Bytes("prefix"))
       expect((await exposedRelayPledge._validRelay(find, relayed.encodeAsBytes()))[1]).to.equal(true);
     })
 
@@ -286,12 +266,6 @@ describe("RelayPledge", function () {
     it("Rejects alphabetically later messages", async () => {
       let relayed = await newRequest(poster, "store", ethers.utils.toUtf8Bytes("1"), 2)
       let find = new findRequest(2, "0", await poster.getAddress())
-      expect((await exposedRelayPledge._validRelay(find, relayed.encodeAsBytes()))[1]).to.equal(false);
-    })
-
-    it("Rejects messages without the specified prefix", async () => {
-      let relayed = await newRequest(poster, "store", ethers.utils.toUtf8Bytes("1"), 1)
-      let find = new findRequest(2, "0", await poster.getAddress(), ethers.utils.toUtf8Bytes("someprefix"))
       expect((await exposedRelayPledge._validRelay(find, relayed.encodeAsBytes()))[1]).to.equal(false);
     })
   })
