@@ -12,6 +12,7 @@ export function receiptFromJSON (json: any) {
       fixUint8Array(json.request.message),
       json.request.user,
       json.request.blockNumber,
+      json.request.businessLogic,
       json.request.signature,
     ),
     fixUint8Array(json.response),
@@ -34,12 +35,13 @@ export class Receipt {
 
 export async function newReceipt(server: ethers.Signer, request: Request, response: ethers.BytesLike):Promise<Receipt> {
   let encoded = ethers.utils.defaultAbiCoder.encode(
-    ["tuple(bytes, bytes, address, uint256, bytes)", "bytes"],
+    ["tuple(bytes, bytes, address, uint256, address, bytes)", "bytes"],
     [[
       request.meta,
       request.message,
       request.user,
       request.blockNumber,
+      request.businessLogic,
       request.signature,
     ], response])
   let hashed = ethers.utils.keccak256(encoded);
@@ -50,26 +52,27 @@ export async function newReceipt(server: ethers.Signer, request: Request, respon
 }
 
 
-
 export class Request {
   meta: ethers.BytesLike;
   message: ethers.BytesLike;
   user: string;
   blockNumber: ethers.BigNumberish;
+  businessLogic: string;
   signature: ethers.BytesLike;
 
-  constructor(meta: ethers.BytesLike, message: ethers.BytesLike, user: string, blockNumber: ethers.BigNumberish, signature: string) {
+  constructor(meta: ethers.BytesLike, message: ethers.BytesLike, user: string, blockNumber: ethers.BigNumberish, businessLogic: string, signature: string) {
     this.meta = meta;
     this.message = message;
     this.user = user;
     this.blockNumber = blockNumber;
+    this.businessLogic = businessLogic;
     this.signature = signature;
   }
 
   encodeAsBytes() {
     return ethers.utils.defaultAbiCoder.encode(
       [
-        "tuple(bytes, bytes, address, uint256, bytes)",
+        "tuple(bytes, bytes, address, uint256, address, bytes)",
       ],
       [
         [
@@ -77,6 +80,7 @@ export class Request {
           this.message,
           this.user,
           this.blockNumber,
+          this.businessLogic,
           this.signature,
         ]
       ]
@@ -88,7 +92,7 @@ export class Request {
   }
 
   recoverSigner() {
-    let hashBinary = encodeMessage(this.meta, this.message, this.user, this.blockNumber)
+    let hashBinary = encodeMessage(this.meta, this.message, this.user, this.blockNumber, this.businessLogic)
 
     // as per https://github.com/ethers-io/ethers.js/issues/447#issuecomment-470618705
     let messageHash = ethers.utils.hashMessage(hashBinary);
@@ -97,20 +101,21 @@ export class Request {
   }
 }
 
-function encodeMessage(meta: ethers.BytesLike, message: ethers.BytesLike, user: string, blockNumber: ethers.BigNumberish) {
-  let encoded = ethers.utils.defaultAbiCoder.encode(["bytes", "bytes", "address", "uint256"], [meta, message, user, blockNumber])
+function encodeMessage(meta: ethers.BytesLike, message: ethers.BytesLike, user: string, blockNumber: ethers.BigNumberish, businessLogic: string) {
+  let encoded = ethers.utils.defaultAbiCoder.encode(["bytes", "bytes", "address", "uint256", "address"], [meta, message, user, blockNumber, businessLogic])
   let hashed = ethers.utils.keccak256(encoded);
   return ethers.utils.arrayify(hashed);
 }
 
-export async function newRequest(signer: ethers.Signer, meta: string, message: ethers.BytesLike, blockNumber: ethers.BigNumberish):Promise<Request> {
+export async function newRequest(signer: ethers.Signer, meta: string, message: ethers.BytesLike, blockNumber: ethers.BigNumberish, businessLogic?: string):Promise<Request> {
   let user = await signer.getAddress();
   let _meta = ethers.utils.toUtf8Bytes(meta);
+  if (!businessLogic) businessLogic = "0x8ba1f109551bD432803012645Ac136ddd64DBA72"
 
-  let hashBinary = encodeMessage(_meta, message, user, blockNumber)
+  let hashBinary = encodeMessage(_meta, message, user, blockNumber, businessLogic)
   let signature = await signer.signMessage(hashBinary);
 
-  return new Request(_meta, message, user, blockNumber, signature)
+  return new Request(_meta, message, user, blockNumber, businessLogic, signature)
 }
 
 export class messageFinder {

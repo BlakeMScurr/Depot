@@ -19,6 +19,7 @@ library Pledge {
         bytes message;
         address user;
         uint256 blockNumber;
+        address businessLogic;
         bytes signature;
     }
 
@@ -46,7 +47,7 @@ library Pledge {
      * @return True if the signature is valid, false otherwise.
      */
     function validUserSignature(Request memory rq) public pure returns (bool) {
-        bytes32 hash = keccak256(abi.encode(rq.meta, rq.message, rq.user, rq.blockNumber));
+        bytes32 hash = keccak256(abi.encode(rq.meta, rq.message, rq.user, rq.blockNumber, rq.businessLogic));
         return hash.toEthSignedMessageHash().recover(rq.signature) == rq.user;
     }
 }
