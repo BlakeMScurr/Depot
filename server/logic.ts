@@ -98,14 +98,12 @@ class postgres {
             [rq.byUser, ethers.BigNumber.from(rq.fromBlockNumber).toBigInt()]
         )
 
-
         if (previousBlock.rows.length != 0) {
             return previousBlock.rows.map((row) => {
                 return receiptFromJSON(row.receipt)
             }).reduce((p, v) => {
                 return compareMessages(p.request.message, v.request.message) > 0 ? p : v
             })
-            return receiptFromJSON(previousBlock.rows[0].receipt);
         }
         return this._nullReceipt
     }
