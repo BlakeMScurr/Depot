@@ -5,7 +5,7 @@ chai.use(chaiAsPromised.default)
 
 import { ethers } from "hardhat";
 import { compareMessages, handleRequest, makeSiloDB, SiloDatabase, validateRequest } from "../../server/logic";
-import { findRequest, newReceipt, newRequest, Receipt, Request } from "../../client/Requests"
+import { messageFinder, newReceipt, newRequest, Receipt, Request } from "../../client/Requests"
 import * as e from "ethers";
 import { ABIHack__factory, Pledge__factory, RelayPledge, RelayPledge__factory } from "../../typechain";
 import { Client } from "pg";
@@ -92,7 +92,7 @@ describe("Server", () => {
 
         it("Should find nothing if nothing is stored", async () => {
             expect(
-                await db.find(new findRequest(5, "", await storer.getAddress()))
+                await db.find(new messageFinder(5, "", await storer.getAddress()))
             ).to.deep.equal(db.nullReceipt())
         })
 
@@ -102,7 +102,7 @@ describe("Server", () => {
             expect(hStoreReceipt).to.deep.equal(await newReceipt(server, hello, ethers.utils.arrayify(0)))
             expect(haStoreReceipt).to.deep.equal(await newReceipt(server, helloAgain, ethers.utils.arrayify(0)))
 
-            let fr = new findRequest(3, "", await storer.getAddress())
+            let fr = new messageFinder(3, "", await storer.getAddress())
             let findReceipt = await newReceipt(server, await newRequest(server, "find", fr.encodeAsBytes(), 4), helloAgain.encodeAsBytes())
 
             expect(
@@ -122,17 +122,17 @@ describe("Server", () => {
 
         it("Should not find messages from later blocks", async () => {
             expect(
-                await db.find(new findRequest(0, "", await storer.getAddress()))
+                await db.find(new messageFinder(0, "", await storer.getAddress()))
             ).to.deep.equal(db.nullReceipt())
         })
 
         it("Should not find messages from later in a block", async () => {
             expect(
-                await db.find(new findRequest(1, "Hellp", await storer.getAddress()))
+                await db.find(new messageFinder(1, "Hellp", await storer.getAddress()))
             ).to.deep.equal(db.nullReceipt())
         })
 
-        let testQuery = async (fr: findRequest, expected: Request) => {
+        let testQuery = async (fr: messageFinder, expected: Request) => {
             let storeReceipt = await newReceipt(server, expected, ethers.utils.arrayify(0))
             let findReceipt = await newReceipt(server, await newRequest(server, "find", fr.encodeAsBytes(), 3), expected.encodeAsBytes())
             expect(
@@ -147,16 +147,16 @@ describe("Server", () => {
 
         it("Should find the first of two cross block messages", async () => {
             // from the target message
-            await testQuery(new findRequest(1, "Hello!", await storer.getAddress()), hello)
+            await testQuery(new messageFinder(1, "Hello!", await storer.getAddress()), hello)
             
             // from later in the earlier block
-            await testQuery(new findRequest(1, "Hello!!", await storer.getAddress()), hello)
+            await testQuery(new messageFinder(1, "Hello!!", await storer.getAddress()), hello)
 
             // from earlier in the later block
-            await testQuery(new findRequest(2, "", await storer.getAddress()), hello)
+            await testQuery(new messageFinder(2, "", await storer.getAddress()), hello)
 
             // from immediately before the message in the later block
-            await testQuery(new findRequest(2, "Hello again ", await storer.getAddress()), hello)
+            await testQuery(new messageFinder(2, "Hello again ", await storer.getAddress()), hello)
         })
 
         it("Should find the first of two messages in the same block", async () => {
@@ -166,22 +166,22 @@ describe("Server", () => {
             expect(fmStoreReceipt).to.deep.equal(await newReceipt(server, finalMessage, ethers.utils.arrayify(0)))
 
             // from the earlier message
-            await testQuery(new findRequest(2, "Hello again!", await storer.getAddress()), helloAgain)
+            await testQuery(new messageFinder(2, "Hello again!", await storer.getAddress()), helloAgain)
             
             // from between the messages
-            await testQuery(new findRequest(2, "middling length", await storer.getAddress()), helloAgain)
+            await testQuery(new messageFinder(2, "middling length", await storer.getAddress()), helloAgain)
             
             // from immediately before the later message
-            await testQuery(new findRequest(2, "Final message herd", await storer.getAddress()), helloAgain)
+            await testQuery(new messageFinder(2, "Final message herd", await storer.getAddress()), helloAgain)
             
             // from later message
-            await testQuery(new findRequest(2, "Final message here", await storer.getAddress()), finalMessage)
+            await testQuery(new messageFinder(2, "Final message here", await storer.getAddress()), finalMessage)
         })
 
         it("Should catch integer overflows", async () => {
             let serverAddress = await await server.getAddress()
             return expect(
-                db.find(new findRequest(
+                db.find(new messageFinder(
                     ethers.BigNumber.from("9223372036854775808"),
                     "",
                     serverAddress

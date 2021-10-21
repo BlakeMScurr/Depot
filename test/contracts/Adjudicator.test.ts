@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import * as e from "ethers";
 import { Token, Token__factory, RelayPledge, RelayPledge__factory, ABIHack__factory, Pledge__factory, LivelinessPledge__factory, Adjudicator__factory, Adjudicator, LivelinessPledge } from "../../typechain"
-import { newRequest, newReceipt, findRequest } from "../../client/Requests"
+import { newRequest, newReceipt, messageFinder } from "../../client/Requests"
 
 describe("RelayPledge", function () {
     let token: Token;
@@ -61,7 +61,7 @@ describe("RelayPledge", function () {
                     await newRequest(
                         requester,
                         "find",
-                        new findRequest(2, "", await requester.getAddress()).encodeAsBytes(), // target
+                        new messageFinder(2, "", await requester.getAddress()).encodeAsBytes(), // target
                         10,
                     ),
                     (await newRequest(requester, "store", ethers.utils.toUtf8Bytes(""), 0)).encodeAsBytes(), // relayed

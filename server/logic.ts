@@ -2,7 +2,7 @@
 import { ethers } from 'ethers';
 import { Client, ClientConfig } from 'pg';
 import * as lpArtifact from "../artifacts/contracts/Pledge/LivelinessPledge.sol/LivelinessPledge.json";
-import { findRequest, newReceipt, newRequest, Receipt, receiptFromJSON, Request } from '../client/Requests';
+import { messageFinder, newReceipt, newRequest, Receipt, receiptFromJSON, Request } from '../client/Requests';
 
 const lp = new ethers.utils.Interface(lpArtifact.abi);
 
@@ -33,7 +33,7 @@ export async function validateRequest(siloRequest: any, provider: ethers.provide
 
 export interface SiloDatabase {
     store(rq: Request):Promise<Receipt>
-    find(rq: findRequest):Promise<Receipt>
+    find(rq: messageFinder):Promise<Receipt>
     nullReceipt():Receipt
 }
 
@@ -63,7 +63,7 @@ class postgres {
 
     // finds all receipts from a given block and finds the most recent receipt from that block before a given point
     // if there is no message before that point, find all messages from the last block with messages, and return the most recent
-    async find(rq: findRequest):Promise<Receipt> {
+    async find(rq: messageFinder):Promise<Receipt> {
         let blockNum = ethers.BigNumber.from(rq.fromBlockNumber)
         if (blockNum.gt(ethers.BigNumber.from("9223372036854775807"))) {
             return Promise.reject(new Error(`Block number ${blockNum} overflows Postgres's bigint type`))

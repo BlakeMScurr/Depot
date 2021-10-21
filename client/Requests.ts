@@ -113,7 +113,7 @@ export async function newRequest(signer: ethers.Signer, meta: string, message: e
   return new Request(_meta, message, user, blockNumber, signature)
 }
 
-export class findRequest {
+export class messageFinder {
   fromBlockNumber: ethers.BigNumberish;
   fromMessage: ethers.BytesLike;
   byUser: string;

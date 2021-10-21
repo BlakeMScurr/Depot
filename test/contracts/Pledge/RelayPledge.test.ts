@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import * as e from "ethers";
 import { ExposedRelayPledge__factory, RelayPledge__factory, ABIHack__factory, Pledge__factory, ExposedRelayPledge, RelayPledge } from "../../../typechain"
-import { newRequest, findRequest, newReceipt, Request } from "../../../client/Requests"
+import { newRequest, messageFinder, newReceipt, Request } from "../../../client/Requests"
 
 describe("RelayPledge", function () {
   let exposedRelayPledge: ExposedRelayPledge;
@@ -33,7 +33,7 @@ describe("RelayPledge", function () {
     it("Keeps pledge intact for identical withheld/relayed", async () => {
       await isBrokenTest(
         await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 1), // withheld
-        new findRequest(1, "", await poster.getAddress()), // target
+        new messageFinder(1, "", await poster.getAddress()), // target
         await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 1), // relayed
         false,
       )
@@ -43,7 +43,7 @@ describe("RelayPledge", function () {
     it("Keeps pledge intact for later relayed than withheld (if relayed before target)", async () => {
       await isBrokenTest(
         await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 0), // withheld
-        new findRequest(2, "", await poster.getAddress()), // target
+        new messageFinder(2, "", await poster.getAddress()), // target
         await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 1), // relayed
         false,
       )
@@ -53,7 +53,7 @@ describe("RelayPledge", function () {
     it("Breaks pledge for relayed after target", async () => {
       await isBrokenTest(
         await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 0), // withheld
-        new findRequest(1, "", await poster.getAddress()), // target
+        new messageFinder(1, "", await poster.getAddress()), // target
         await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 2), // relayed
         true,
       )
@@ -63,13 +63,13 @@ describe("RelayPledge", function () {
     it("Breaks pledge for withheld after relayed", async () => {
       await isBrokenTest(
         await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 1), // withheld
-        new findRequest(2, "", await poster.getAddress()), // target
+        new messageFinder(2, "", await poster.getAddress()), // target
         await newRequest(poster, "store", ethers.utils.toUtf8Bytes(""), 0), // relayed
         true,
       )
     })
 
-    async function isBrokenTest(withheld: Request, target: findRequest, relayed: Request, value: boolean) {
+    async function isBrokenTest(withheld: Request, target: messageFinder, relayed: Request, value: boolean) {
       expect(await relayPledge.isBroken(
         await newReceipt(
           server,
@@ -100,7 +100,7 @@ describe("RelayPledge", function () {
     }
 
     async function findReceipt(fr?: e.ethers.BytesLike) {
-      if (!fr) fr = new findRequest(1, "1", await poster.getAddress()).encodeAsBytes()
+      if (!fr) fr = new messageFinder(1, "1", await poster.getAddress()).encodeAsBytes()
       return await newReceipt(
         server,
         await newRequest(
@@ -175,21 +175,21 @@ describe("RelayPledge", function () {
     it("Rejects find requests for irrelevant users", async () => {
       await expect(exposedRelayPledge._validateReceipts(
         await storeReceipt(),
-        await findReceipt(new findRequest(1, "", await reader.getAddress()).encodeAsBytes())
+        await findReceipt(new messageFinder(1, "", await reader.getAddress()).encodeAsBytes())
       )).to.be.revertedWith("Find and store request relate to different users")
     })
 
     it("Rejects store requests from later blocks", async () => {
       await expect(exposedRelayPledge._validateReceipts(
         await storeReceipt(),
-        await findReceipt(new findRequest(0, "", await poster.getAddress()).encodeAsBytes()),
+        await findReceipt(new messageFinder(0, "", await poster.getAddress()).encodeAsBytes()),
       )).to.be.revertedWith("Message can't be a valid response to find request: stored after find request's start block")
     })
 
     it("Rejects store requests from later in the same block", async () => {
       await expect(exposedRelayPledge._validateReceipts(
         await storeReceipt(),
-        await findReceipt(new findRequest(1, "0", await poster.getAddress()).encodeAsBytes()),
+        await findReceipt(new messageFinder(1, "0", await poster.getAddress()).encodeAsBytes()),
       )).to.be.revertedWith("Message can't be a valid response to find request: stored after find request's start point within the same block")
     })
 
@@ -200,7 +200,7 @@ describe("RelayPledge", function () {
         await newRequest(
           reader,
           "find",
-          new findRequest(1, "1", await poster.getAddress()).encodeAsBytes(),
+          new messageFinder(1, "1", await poster.getAddress()).encodeAsBytes(),
           0,
         ),
         ethers.utils.toUtf8Bytes("junk (we don't care how the server responded for this test)"),
@@ -215,37 +215,37 @@ describe("RelayPledge", function () {
   describe("Valid Relay", () => {
     it("Allows earlier relays", async () => {
       let relayed = await newRequest(poster, "store", ethers.utils.toUtf8Bytes("1"), 1)
-      let find = new findRequest(2, "0", await poster.getAddress())
+      let find = new messageFinder(2, "0", await poster.getAddress())
       expect((await exposedRelayPledge._validRelay(find, relayed.encodeAsBytes()))[1]).to.equal(true);
     })
 
     it("Allows exact relays", async () => {
       let relayed = await newRequest(poster, "store", ethers.utils.toUtf8Bytes("0"), 1)
-      let find = new findRequest(1, "0", await poster.getAddress())
+      let find = new messageFinder(1, "0", await poster.getAddress())
       expect((await exposedRelayPledge._validRelay(find, relayed.encodeAsBytes()))[1]).to.equal(true);
     })
 
     it("Rejects malformed relays", async () => {
-      let find = new findRequest(1, "0", await poster.getAddress())
+      let find = new messageFinder(1, "0", await poster.getAddress())
       expect((await exposedRelayPledge._validRelay(find, ethers.utils.toUtf8Bytes("0")))[1]).to.equal(false);
     })
 
     it("Rejects non store requests as find responses", async () => {
       let relayed = await newRequest(poster, "non-store", ethers.utils.toUtf8Bytes("1"), 2)
-      let find = new findRequest(1, "0", await poster.getAddress())
+      let find = new messageFinder(1, "0", await poster.getAddress())
       expect((await exposedRelayPledge._validRelay(find, relayed.encodeAsBytes()))[1]).to.equal(false);
     })
 
     it("Rejects responses from irrelevant users", async () => {
       let relayed = await newRequest(reader, "non-store", ethers.utils.toUtf8Bytes("1"), 2)
-      let find = new findRequest(1, "0", await poster.getAddress())
+      let find = new messageFinder(1, "0", await poster.getAddress())
       expect((await exposedRelayPledge._validRelay(find, relayed.encodeAsBytes()))[1]).to.equal(false);
     })
 
     it("Rejects garbage signatures", async () => {
       let relayed = await newRequest(poster, "store", ethers.utils.toUtf8Bytes("1"), 2)
       relayed.signature = ethers.utils.toUtf8Bytes("somerandomthing")
-      let find = new findRequest(1, "0", await poster.getAddress())
+      let find = new messageFinder(1, "0", await poster.getAddress())
       expect((await exposedRelayPledge._validRelay(find, relayed.encodeAsBytes()))[1]).to.equal(false);
     })
 
@@ -253,19 +253,19 @@ describe("RelayPledge", function () {
       let relayed = await newRequest(poster, "store", ethers.utils.toUtf8Bytes("1"), 2)
       let signed = await newRequest(poster, "someothermeta", ethers.utils.toUtf8Bytes("someothermessage"), 2)
       relayed.signature = signed.signature
-      let find = new findRequest(1, "0", await poster.getAddress())
+      let find = new messageFinder(1, "0", await poster.getAddress())
       expect((await exposedRelayPledge._validRelay(find, relayed.encodeAsBytes()))[1]).to.equal(false);
     })
 
     it("Rejects messages from later blocks", async () => {
       let relayed = await newRequest(poster, "store", ethers.utils.toUtf8Bytes("1"), 2)
-      let find = new findRequest(1, "0", await poster.getAddress())
+      let find = new messageFinder(1, "0", await poster.getAddress())
       expect((await exposedRelayPledge._validRelay(find, relayed.encodeAsBytes()))[1]).to.equal(false);
     })
 
     it("Rejects alphabetically later messages", async () => {
       let relayed = await newRequest(poster, "store", ethers.utils.toUtf8Bytes("1"), 2)
-      let find = new findRequest(2, "0", await poster.getAddress())
+      let find = new messageFinder(2, "0", await poster.getAddress())
       expect((await exposedRelayPledge._validRelay(find, relayed.encodeAsBytes()))[1]).to.equal(false);
     })
   })

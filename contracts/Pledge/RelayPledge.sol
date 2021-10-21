@@ -13,7 +13,7 @@ import "./ABIHack.sol";
  * If the server responds with the wrong message, the pledge is broken, and the server can be penalized.
  */
 contract RelayPledge {
-    struct FindRequest {
+    struct MessageFinder {
         uint256 fromBlockNumber;
         bytes fromMessage;
         address byUser;
@@ -40,14 +40,14 @@ contract RelayPledge {
      * - or the server broke its pledge. 
      */
     function isBroken(Pledge.Receipt memory storeReceipt, Pledge.Receipt memory findReceipt) external view returns (bool) {
-        FindRequest memory findRequest;
+        MessageFinder memory messageFinder;
         bytes memory findResponse;
         Pledge.Request memory withheld;
-        (findRequest, findResponse, withheld) = validateReceipts(storeReceipt, findReceipt);
+        (messageFinder, findResponse, withheld) = validateReceipts(storeReceipt, findReceipt);
 
         bool valid;
         Pledge.Request memory relayed;
-        (relayed, valid) = validRelay(findRequest, findResponse);
+        (relayed, valid) = validRelay(messageFinder, findResponse);
         if (!valid) {
             return true;
         }
@@ -63,7 +63,7 @@ contract RelayPledge {
      * find receipt, i.e., it must be before or at the point defined by the
      * find receipt.
      */
-    function validateReceipts(Pledge.Receipt memory storeReceipt, Pledge.Receipt memory findReceipt) internal view returns (FindRequest memory, bytes memory, Pledge.Request memory) {
+    function validateReceipts(Pledge.Receipt memory storeReceipt, Pledge.Receipt memory findReceipt) internal view returns (MessageFinder memory, bytes memory, Pledge.Request memory) {
         // Validate receipt types and signatures
         require(keccak256(abi.encodePacked(storeReceipt.request.meta)) == keccak256(abi.encodePacked("store")), "First request must be a store request");
         require(keccak256(abi.encodePacked(findReceipt.request.meta)) == keccak256(abi.encodePacked("find")), "Second request must be a find request");
@@ -71,19 +71,19 @@ contract RelayPledge {
         Pledge.requireValidServerSignature(findReceipt, server);
 
         // Validate find request format - the server can't be held to illformed requests
-        FindRequest memory findRequest = abi.decode(findReceipt.request.message, (FindRequest));
+        MessageFinder memory messageFinder = abi.decode(findReceipt.request.message, (MessageFinder));
 
 
         // Validate applicability of find request to store request
-        require(findRequest.byUser == storeReceipt.request.user, "Find and store request relate to different users");
-        require(findRequest.fromBlockNumber >= storeReceipt.request.blockNumber, "Message can't be a valid response to find request: stored after find request's start block");
-        if (findRequest.fromBlockNumber == storeReceipt.request.blockNumber) {
-            require(compare(findRequest.fromMessage, storeReceipt.request.message) >= 0, "Message can't be a valid response to find request: stored after find request's start point within the same block");
+        require(messageFinder.byUser == storeReceipt.request.user, "Find and store request relate to different users");
+        require(messageFinder.fromBlockNumber >= storeReceipt.request.blockNumber, "Message can't be a valid response to find request: stored after find request's start block");
+        if (messageFinder.fromBlockNumber == storeReceipt.request.blockNumber) {
+            require(compare(messageFinder.fromMessage, storeReceipt.request.message) >= 0, "Message can't be a valid response to find request: stored after find request's start point within the same block");
         }
 
-        require(findRequest.fromBlockNumber < findReceipt.request.blockNumber, "Find requests must refer to the past, since the server can't know what might be stored in the future");
+        require(messageFinder.fromBlockNumber < findReceipt.request.blockNumber, "Find requests must refer to the past, since the server can't know what might be stored in the future");
 
-        return (findRequest, findReceipt.response, storeReceipt.request);
+        return (messageFinder, findReceipt.response, storeReceipt.request);
     }
 
     /**
@@ -92,7 +92,7 @@ contract RelayPledge {
      * The reponse must be a properly signed and formatted message, and it must
      * be at/before the time specified by the request.
      */
-    function validRelay(FindRequest memory findRequest, bytes memory findResponse) internal view returns (Pledge.Request memory, bool) {
+    function validRelay(MessageFinder memory messageFinder, bytes memory findResponse) internal view returns (Pledge.Request memory, bool) {
         // The response to the find request must be a well formatted store request
         // Call an external contract to catch abi decoding errors
         Pledge.Request memory relayed;
@@ -115,14 +115,14 @@ contract RelayPledge {
         }
 
         // The user who created the store request must be the one requested in the find request
-        if (findRequest.byUser != relayed.user) {
+        if (messageFinder.byUser != relayed.user) {
             return (relayed, false);
         }
 
         // The store request must be from the requested point or after
-        if (relayed.blockNumber > findRequest.fromBlockNumber ||
-            (relayed.blockNumber == findRequest.fromBlockNumber &&
-            compare(relayed.message, findRequest.fromMessage) > 0)
+        if (relayed.blockNumber > messageFinder.fromBlockNumber ||
+            (relayed.blockNumber == messageFinder.fromBlockNumber &&
+            compare(relayed.message, messageFinder.fromMessage) > 0)
         ) {
             return (relayed, false);
         }
