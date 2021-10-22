@@ -110,7 +110,7 @@ function encodeMessage(meta: ethers.BytesLike, message: ethers.BytesLike, user: 
 export async function newRequest(signer: ethers.Signer, meta: string, message: ethers.BytesLike, blockNumber: ethers.BigNumberish, businessLogic?: string):Promise<Request> {
   let user = await signer.getAddress();
   let _meta = ethers.utils.toUtf8Bytes(meta);
-  if (!businessLogic) businessLogic = "0x8ba1f109551bD432803012645Ac136ddd64DBA72"
+  businessLogic = businessLogic || defaultBusinessLogic;
 
   let hashBinary = encodeMessage(_meta, message, user, blockNumber, businessLogic)
   let signature = await signer.signMessage(hashBinary);
@@ -122,25 +122,31 @@ export class messageFinder {
   fromBlockNumber: ethers.BigNumberish;
   fromMessage: ethers.BytesLike;
   byUser: string;
+  businessLogic: string;
 
-  constructor(fromBlockNumber: ethers.BigNumberish, fromMessage: string, byUser: string) {
+  constructor(fromBlockNumber: ethers.BigNumberish, fromMessage: string, byUser: string, businessLogic?: string) {
     this.fromBlockNumber = fromBlockNumber;
     this.fromMessage = ethers.utils.toUtf8Bytes(fromMessage);
     this.byUser = byUser;
+    this.businessLogic = businessLogic || defaultBusinessLogic;
   }
 
   encodeAsBytes() {
     return ethers.utils.defaultAbiCoder.encode(
       [
-        "tuple(uint256, bytes, address)",
+        "tuple(uint256, bytes, address, address)",
       ],
       [
         [
           this.fromBlockNumber,
           this.fromMessage,
           this.byUser,
+          this.businessLogic,
         ]
       ]
     ) 
   }
 }
+
+// The gitcoin address
+const defaultBusinessLogic = "0x8ba1f109551bD432803012645Ac136ddd64DBA72"

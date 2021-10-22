@@ -210,6 +210,13 @@ describe("RelayPledge", function () {
         find,
       )).to.be.revertedWith("Find requests must refer to the past, since the server can't know what might be stored in the future")
     })
+
+    it("Rejects invalid business logic addresses", async () => {
+      await expect(exposedRelayPledge._validateReceipts(
+        await storeReceipt(),
+        await findReceipt(new messageFinder(1, "1", await poster.getAddress(), exposedRelayPledge.address).encodeAsBytes())
+      )).to.be.revertedWith("Message is for a different contract than finder")
+    })
   })
 
   describe("Valid Relay", () => {
@@ -266,6 +273,12 @@ describe("RelayPledge", function () {
     it("Rejects alphabetically later messages", async () => {
       let relayed = await newRequest(poster, "store", ethers.utils.toUtf8Bytes("1"), 2)
       let find = new messageFinder(2, "0", await poster.getAddress())
+      expect((await exposedRelayPledge._validRelay(find, relayed.encodeAsBytes()))[1]).to.equal(false);
+    })
+
+    it("Rejects messages without the specified businessLogic contract", async () => {
+      let relayed = await newRequest(poster, "store", ethers.utils.toUtf8Bytes("1"), 1)
+      let find = new messageFinder(2, "0", await poster.getAddress(), exposedRelayPledge.address)
       expect((await exposedRelayPledge._validRelay(find, relayed.encodeAsBytes()))[1]).to.equal(false);
     })
   })

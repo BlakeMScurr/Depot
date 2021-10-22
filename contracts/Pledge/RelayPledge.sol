@@ -17,6 +17,7 @@ contract RelayPledge {
         uint256 fromBlockNumber;
         bytes fromMessage;
         address byUser;
+        address businessLogic;
     }
 
     ABIHack abiHack;
@@ -76,6 +77,7 @@ contract RelayPledge {
 
         // Validate applicability of find request to store request
         require(messageFinder.byUser == storeReceipt.request.user, "Find and store request relate to different users");
+        require(messageFinder.businessLogic == storeReceipt.request.businessLogic, "Message is for a different contract than finder");
         require(messageFinder.fromBlockNumber >= storeReceipt.request.blockNumber, "Message can't be a valid response to find request: stored after find request's start block");
         if (messageFinder.fromBlockNumber == storeReceipt.request.blockNumber) {
             require(compare(messageFinder.fromMessage, storeReceipt.request.message) >= 0, "Message can't be a valid response to find request: stored after find request's start point within the same block");
@@ -118,6 +120,11 @@ contract RelayPledge {
         if (messageFinder.byUser != relayed.user) {
             return (relayed, false);
         }
+
+        // The message must have the business logic contract specified in the finder
+        if (messageFinder.businessLogic != relayed.businessLogic) {
+            return (relayed, false);
+        } 
 
         // The store request must be from the requested point or after
         if (relayed.blockNumber > messageFinder.fromBlockNumber ||
