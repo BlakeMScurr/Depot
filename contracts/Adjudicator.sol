@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 import "./Bond.sol";
+import "./BusinessLogic.sol";
 import "./Pledge/LivelinessPledge.sol";
 import "./Pledge/RelayPledge.sol";
 
@@ -14,10 +15,13 @@ import "./Pledge/RelayPledge.sol";
 contract Adjudicator is Bond {
     LivelinessPledge livelinessPledge;
     RelayPledge relayPledge;
+    address server;
+    RequestValidator[] validators;
 
-    constructor(address erc20, LivelinessPledge _livelinessPledge, RelayPledge _relayPledge) Bond(erc20){
+    constructor(address erc20, LivelinessPledge _livelinessPledge, RelayPledge _relayPledge, address _server) Bond(erc20){
         livelinessPledge = _livelinessPledge;
         relayPledge = _relayPledge;
+        server = _server;
     }
 
     /**
@@ -41,6 +45,21 @@ contract Adjudicator is Bond {
         if (!guiltyRelayVerdicts[requestHash] && relayPledge.isBroken(storeReceipt, findReceipt)) {
             super.slash(1, 5);
             guiltyRelayVerdicts[requestHash] = true;
+        }
+    }
+
+    
+    function addValidator(RequestValidator validator) external onlyOwner {
+        validators.push(validator);
+    }
+
+    mapping(bytes32 => bool) guiltyValidVerdicts;
+    function notValid(Pledge.Receipt memory receipt, uint256 validator) public {
+        bytes32 hash = keccak256(abi.encode(receipt));
+        Pledge.requireValidServerSignature(receipt, server);
+        if (!guiltyValidVerdicts[hash] && !validators[validator].validRequest(receipt.request)) {
+            super.slash(1, 5);
+            guiltyValidVerdicts[hash] = true;
         }
     }
 }
