@@ -16,7 +16,7 @@ contract Adjudicator is Bond {
     LivelinessPledge livelinessPledge;
     RelayPledge relayPledge;
     address server;
-    RequestValidator[] validators;
+    mapping(RequestValidator => bool) validators;
 
     constructor(address erc20, LivelinessPledge _livelinessPledge, RelayPledge _relayPledge, address _server) Bond(erc20){
         livelinessPledge = _livelinessPledge;
@@ -48,18 +48,34 @@ contract Adjudicator is Bond {
         }
     }
 
-    
-    function addValidator(RequestValidator validator) external onlyOwner {
-        validators.push(validator);
-    }
-
+    /**
+    * @dev Slash 20% of the bond if the server lets invalid requests through
+    * i.e., if the server pledges that it will only allow valid requests according
+    * to specific onchain logic, and it signs receipts for requests that break that
+    * logic.
+    */
     mapping(bytes32 => bool) guiltyValidVerdicts;
-    function notValid(Pledge.Receipt memory receipt, uint256 validator) public {
-        bytes32 hash = keccak256(abi.encode(receipt));
+    function notValid(Pledge.Receipt memory receipt) public {
+        require(validators[receipt.request.businessLogic], "Validator has not been approved by the Silo operator"); // the owner must manually approve validators - it's easy to write a malicious validator
         Pledge.requireValidServerSignature(receipt, server);
-        if (!guiltyValidVerdicts[hash] && !validators[validator].validRequest(receipt.request)) {
+        bytes32 hash = keccak256(abi.encode(receipt));
+        if (!guiltyValidVerdicts[hash] && !receipt.request.businessLogic.validRequest(receipt.request)) {
             super.slash(1, 5);
             guiltyValidVerdicts[hash] = true;
         }
+    }
+
+    /**
+    * @dev Pledge to abide by given logic when signing receipts
+    */
+    function addValidator(RequestValidator validator) external onlyOwner {
+        validators[validator] = true;
+    }
+
+    /**
+    * @dev Convenience function to see which validators binding
+    */
+    function hasValidator(RequestValidator validator) external view returns (bool){
+        return validators[validator];
     }
 }

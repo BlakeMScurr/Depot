@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import * as e from "ethers";
-import { Token, Token__factory, RelayPledge, RelayPledge__factory, ABIHack__factory, Pledge__factory, LivelinessPledge__factory, Adjudicator__factory, Adjudicator, LivelinessPledge, TrivialValidator__factory } from "../../typechain"
+import { Token, Token__factory, RelayPledge, RelayPledge__factory, ABIHack__factory, Pledge__factory, LivelinessPledge__factory, Adjudicator__factory, Adjudicator, LivelinessPledge, TrivialValidator__factory, TrivialValidator, OddMessage__factory, OddMessage } from "../../typechain"
 import { newRequest, newReceipt, messageFinder } from "../../client/Requests"
 
 describe("RelayPledge", function () {
@@ -10,6 +10,8 @@ describe("RelayPledge", function () {
     let relayPledge: RelayPledge;
     let adjudicator: Adjudicator;
     let tva: string; // trivial validator address
+    let trivialValidator: TrivialValidator;
+    let oddMessage: OddMessage;
     
     let tokenOwner: e.Signer;
     let server: e.Signer;
@@ -32,8 +34,10 @@ describe("RelayPledge", function () {
         const abiHack = await new ABIHack__factory(server).deploy();
         relayPledge = await new RelayPledge__factory(pledgeLibrary, server).deploy(abiHack.address, await server.getAddress());
 
-        adjudicator = await new Adjudicator__factory(server).deploy(token.address, livelinessPledge.address, relayPledge.address);
-        tva = (await new TrivialValidator__factory(server).deploy()).address;
+        adjudicator = await new Adjudicator__factory(pledgeLibrary, server).deploy(token.address, livelinessPledge.address, relayPledge.address, await server.getAddress());
+        trivialValidator = await new TrivialValidator__factory(server).deploy();
+        oddMessage = await new OddMessage__factory(server).deploy();
+        tva = trivialValidator.address;
     })
 
     describe("Adjudicator", () => {
@@ -100,6 +104,43 @@ describe("RelayPledge", function () {
             await adjudicator.connect(fisherman).notLively(rq.hash());
             expect(await token.balanceOf(adjudicator.address)).to.eq(3799);
             expect(await token.balanceOf(await fisherman.getAddress())).to.eq(1);
+            await token.connect(fisherman).transfer(await tokenOwner.getAddress(), 1); // clear away the tokens for the next test
+        })
+
+        describe("Validators", () => {
+            it("Should allow one to add validators", async () => {
+                expect(await adjudicator.hasValidator(tva)).to.be.false
+                await expect(adjudicator.connect(fisherman).addValidator(tva)).to.be.revertedWith("Ownable: caller is not the owner")
+                await adjudicator.addValidator(tva)
+                expect(await adjudicator.hasValidator(tva)).to.be.true
+
+            })
+
+            it("Should slash bond when invalid messages are allowed", async () => {
+                // add tokens to the bond
+                token.connect(tokenOwner).transfer(adjudicator.address, 4000 - await (await token.balanceOf(adjudicator.address)).toNumber());
+
+                let invalid = await newReceipt(server, await newRequest(requester, "store", ethers.utils.toUtf8Bytes("even"), 0, oddMessage.address), ethers.utils.arrayify("0x"))
+                let valid = await newReceipt(server, await newRequest(requester, "store", ethers.utils.toUtf8Bytes("odd"), 0, oddMessage.address), ethers.utils.arrayify("0x"))
+
+                // try slashing with a disallowed validator (shouldn't work)
+                await expect(adjudicator.connect(fisherman).notValid(invalid)).to.be.revertedWith("Validator has not been approved by the Silo operator");
+                await adjudicator.addValidator(oddMessage.address)
+
+                // try slashing with a valid message (shouldn't work)
+                await adjudicator.connect(fisherman).notValid(valid)
+                expect((await token.balanceOf(adjudicator.address)).toNumber()).to.eq(4000)
+
+                // try slashing with an invalid message (should work)
+                await adjudicator.connect(fisherman).notValid(invalid)
+                expect((await token.balanceOf(adjudicator.address)).toNumber()).to.eq(3196)
+                expect(await token.balanceOf(await fisherman.getAddress())).to.eq(4);
+
+                // try slashing with the same invalid message
+                await adjudicator.connect(fisherman).notValid(invalid)
+                expect((await token.balanceOf(adjudicator.address)).toNumber()).to.eq(3196)
+                expect(await token.balanceOf(await fisherman.getAddress())).to.eq(4);
+            })
         })
     })
 });
