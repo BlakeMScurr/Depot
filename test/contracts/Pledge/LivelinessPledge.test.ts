@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import * as e from "ethers";
-import { Pledge__factory, LivelinessPledge, LivelinessPledge__factory, TrivialValidator__factory, TrivialValidator, NullValidator, OddMessage, NullValidator__factory, OddMessage__factory, RequestValidator } from "../../../typechain"
+import { Pledge__factory, LivelinessPledge, LivelinessPledge__factory, ImpureValidator, ImpureValidator__factory, TrivialValidator__factory, TrivialValidator, NullValidator, OddMessage, NullValidator__factory, OddMessage__factory, RequestValidator } from "../../../typechain"
 import { newRequest, newReceipt } from "../../../client/Requests"
 
 describe("RelayPledge", function () {
@@ -10,6 +10,7 @@ describe("RelayPledge", function () {
   let tva: string; // trivial validator address
   let nullValidator: NullValidator;
   let oddMessage: OddMessage;
+  let impureValidator: ImpureValidator;
 
   let server: e.Signer;
   let requester: e.Signer;
@@ -28,6 +29,8 @@ describe("RelayPledge", function () {
     tva = trivialValidator.address;
     nullValidator = await new NullValidator__factory(server).deploy();
     oddMessage = await new OddMessage__factory(server).deploy();
+    impureValidator = await new ImpureValidator__factory(server).deploy();
+
   })
 
   describe("LivelinessPledge", () => {
@@ -155,6 +158,10 @@ describe("RelayPledge", function () {
 
             rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes(""), await ethers.provider.getBlockNumber() + 1, livelinessPledge.address);
             await expect(livelinessPledge.request(rq)).to.be.revertedWith("function selector was not recognized and there's no fallback function");
+
+            rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes(""), await ethers.provider.getBlockNumber() + 1, impureValidator.address);
+            // TODO: inform hardhat
+            await expect(livelinessPledge.request(rq)).to.be.revertedWith("Transaction reverted and Hardhat couldn't infer the reason. Please report this to help us improve Hardhat.");
         })
     })
 });

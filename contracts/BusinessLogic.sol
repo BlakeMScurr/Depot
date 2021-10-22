@@ -38,3 +38,15 @@ contract OddMessage {
         return r.message.length % 2 == 1;
     }
 }
+
+/**
+ * @title Trivial validator that happens to be impure
+ * @dev Used to test whether impure functions can still be used as validators (it appears it cannot)
+ */
+contract ImpureValidator {
+    uint a;
+    function validRequest(Pledge.Request memory) external returns (bool) {
+        a = 2;
+        return true;
+    }
+}
