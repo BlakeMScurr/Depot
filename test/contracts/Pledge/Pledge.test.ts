@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import * as e from "ethers";
-import { Pledge__factory, Pledge, ExposedPledgeLibrary__factory, ExposedPledgeLibrary } from "../../../typechain"
+import { Pledge__factory, Pledge, ExposedPledgeLibrary__factory, ExposedPledgeLibrary, TrivialValidator__factory } from "../../../typechain"
 import { newRequest, newReceipt } from "../../../client/Requests"
 
 describe("RelayPledge", function () {
@@ -9,6 +9,7 @@ describe("RelayPledge", function () {
     let server: e.Signer;
     let user: e.Signer;
     let serverAddress: string;
+    let tva: string; // trivial validator address
     this.beforeAll(async () => {
         const signers = await ethers.getSigners();
         server = signers[0];
@@ -16,16 +17,17 @@ describe("RelayPledge", function () {
         serverAddress = await server.getAddress();
         const pledgeLibrary = {"contracts/Pledge/Pledge.sol:Pledge": (await new Pledge__factory(server).deploy()).address}
         pledge = await new ExposedPledgeLibrary__factory(pledgeLibrary, server).deploy();
+        tva = (await new TrivialValidator__factory(server).deploy()).address;
     })
 
     describe("Pledge", () => {
         it("Should allow valid user signatures on requests", async () => {
-            const rq = await newRequest(user, "meta", ethers.utils.toUtf8Bytes("some message"), 0);
+            const rq = await newRequest(user, "meta", ethers.utils.toUtf8Bytes("some message"), 0, tva);
             expect(await pledge.validUserSignature(rq)).to.be.true;
         })
 
         it("Should reject invalid signatures", async () => {
-            const rq = await newRequest(user, "meta", ethers.utils.toUtf8Bytes("some message"), 0);
+            const rq = await newRequest(user, "meta", ethers.utils.toUtf8Bytes("some message"), 0, tva);
             rq.signature = await user.signMessage(ethers.utils.toUtf8Bytes("some other message"));
             expect(await pledge.validUserSignature(rq)).to.be.false;
 
@@ -34,13 +36,13 @@ describe("RelayPledge", function () {
         })
 
         it("Should allow valid server signatures on requests", async () => {
-            const rq = await newRequest(user, "meta", ethers.utils.toUtf8Bytes("some message"), 0);
+            const rq = await newRequest(user, "meta", ethers.utils.toUtf8Bytes("some message"), 0, tva);
             const receipt = await newReceipt(server, rq, ethers.utils.toUtf8Bytes("some response"));
             await(expect(pledge.requireValidServerSignature(receipt, await server.getAddress())).not.to.be.revertedWith(""));
         })
 
         it("Should reject invalid server signatures", async () => {
-            const rq = await newRequest(user, "meta", ethers.utils.toUtf8Bytes("some message"), 0);
+            const rq = await newRequest(user, "meta", ethers.utils.toUtf8Bytes("some message"), 0, tva);
             const receipt = await newReceipt(server, rq, ethers.utils.toUtf8Bytes("some response"));
             receipt.signature = await user.signMessage(ethers.utils.toUtf8Bytes("some other message"));
             await(expect(pledge.requireValidServerSignature(receipt, await server.getAddress())).to.be.revertedWith("Server signature must be valid"));

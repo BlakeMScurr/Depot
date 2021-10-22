@@ -15,17 +15,19 @@ describe("Server", () => {
     let server: e.Signer;
     let storer: e.Signer;
     let provider: e.providers.Provider;
+    let tva: string; // trivial validator address
     before(async () => {
         let signers = await ethers.getSigners();
         server = signers[0]
         storer = signers[1]
         provider = await ethers.provider;
+        tva = await server.getAddress() // since this is offchain we don't need a real contract address - the quickest/dirtiest validly formatted address will do
     })
 
     describe("Handle request", () => {
         it("Should reject unknown request types", async () => {
             let bn = await ethers.provider.getBlockNumber()
-            let rq = await newRequest(server, "junk", ethers.utils.toUtf8Bytes("message"), bn)
+            let rq = await newRequest(server, "junk", ethers.utils.toUtf8Bytes("message"), bn, tva)
             await expect(handleRequest(rq, provider)).to.be.rejectedWith("Unknown request type: junk")
         })
     })
@@ -33,21 +35,21 @@ describe("Server", () => {
     describe("Validate request", () => {
         it("Should accept valid requests", async () => {
             let bn = await ethers.provider.getBlockNumber()
-            let rq = await newRequest(server, "meta", ethers.utils.toUtf8Bytes("message"), bn)
+            let rq = await newRequest(server, "meta", ethers.utils.toUtf8Bytes("message"), bn, tva)
             await expect(validateRequest(rq, provider)).not.to.be.rejected
         })
 
         it("Should reject invalid types", async () => {
             await expect(validateRequest(9, provider)).to.be.rejected
             await expect(validateRequest({ some: "some", junk: "junk"}, provider)).to.be.rejected
-            let rq: any = await newRequest(server, "meta", ethers.utils.toUtf8Bytes("message"), 5)
+            let rq: any = await newRequest(server, "meta", ethers.utils.toUtf8Bytes("message"), 5, tva)
             rq.blockNumber = "bn"
             await expect(validateRequest(rq, provider)).to.be.rejected
         })
 
         it("Should reject invalid signatures", async () => {
             let bn = await ethers.provider.getBlockNumber()
-            let rq = await newRequest(server, "meta", ethers.utils.toUtf8Bytes("message"), bn)
+            let rq = await newRequest(server, "meta", ethers.utils.toUtf8Bytes("message"), bn, tva)
             rq.signature = await server.signMessage(ethers.utils.toUtf8Bytes("asdf"))
             await expect(validateRequest(rq, provider)).to.be.rejected
         })
@@ -55,7 +57,7 @@ describe("Server", () => {
         it("Should reject outdated requests", async() => {
             await ethers.provider.send("evm_mine", [])
             let bn = await ethers.provider.getBlockNumber()
-            let rq = await newRequest(server, "meta", ethers.utils.toUtf8Bytes("message"), bn-1)
+            let rq = await newRequest(server, "meta", ethers.utils.toUtf8Bytes("message"), bn-1, tva)
             await expect(validateRequest(rq, provider)).to.be.rejectedWith("Enforcement period for offchain request must start in the future")
 
         })
@@ -79,8 +81,8 @@ describe("Server", () => {
             await client.connect()
             await client.query('TRUNCATE TABLE receipts')
 
-            hello = await newRequest(storer, "store", ethers.utils.toUtf8Bytes("Hello!"), 1)
-            helloAgain = await newRequest(storer, "store", ethers.utils.toUtf8Bytes("Hello again!"), 2)
+            hello = await newRequest(storer, "store", ethers.utils.toUtf8Bytes("Hello!"), 1, tva)
+            helloAgain = await newRequest(storer, "store", ethers.utils.toUtf8Bytes("Hello again!"), 2, tva)
 
             const abiHack = await new ABIHack__factory(server).deploy();
 
@@ -92,7 +94,7 @@ describe("Server", () => {
 
         it("Should find nothing if nothing is stored", async () => {
             expect(
-                await db.find(new messageFinder(5, "", await storer.getAddress()))
+                await db.find(new messageFinder(5, "", await storer.getAddress(), tva))
             ).to.deep.equal(db.nullReceipt())
         })
 
@@ -102,8 +104,8 @@ describe("Server", () => {
             expect(hStoreReceipt).to.deep.equal(await newReceipt(server, hello, ethers.utils.arrayify(0)))
             expect(haStoreReceipt).to.deep.equal(await newReceipt(server, helloAgain, ethers.utils.arrayify(0)))
 
-            let fr = new messageFinder(3, "", await storer.getAddress())
-            let findReceipt = await newReceipt(server, await newRequest(server, "find", fr.encodeAsBytes(), 4), helloAgain.encodeAsBytes())
+            let fr = new messageFinder(3, "", await storer.getAddress(), tva)
+            let findReceipt = await newReceipt(server, await newRequest(server, "find", fr.encodeAsBytes(), 4, tva), helloAgain.encodeAsBytes())
 
             expect(
                 await db.find(fr)
@@ -122,19 +124,19 @@ describe("Server", () => {
 
         it("Should not find messages from later blocks", async () => {
             expect(
-                await db.find(new messageFinder(0, "", await storer.getAddress()))
+                await db.find(new messageFinder(0, "", await storer.getAddress(), tva))
             ).to.deep.equal(db.nullReceipt())
         })
 
         it("Should not find messages from later in a block", async () => {
             expect(
-                await db.find(new messageFinder(1, "Hellp", await storer.getAddress()))
+                await db.find(new messageFinder(1, "Hellp", await storer.getAddress(), tva))
             ).to.deep.equal(db.nullReceipt())
         })
 
         let testQuery = async (fr: messageFinder, expected: Request) => {
             let storeReceipt = await newReceipt(server, expected, ethers.utils.arrayify(0))
-            let findReceipt = await newReceipt(server, await newRequest(server, "find", fr.encodeAsBytes(), 3), expected.encodeAsBytes())
+            let findReceipt = await newReceipt(server, await newRequest(server, "find", fr.encodeAsBytes(), 3, tva), expected.encodeAsBytes())
             expect(
                 await db.find(fr)
             ).to.deep.equal(storeReceipt)
@@ -147,35 +149,35 @@ describe("Server", () => {
 
         it("Should find the first of two cross block messages", async () => {
             // from the target message
-            await testQuery(new messageFinder(1, "Hello!", await storer.getAddress()), hello)
+            await testQuery(new messageFinder(1, "Hello!", await storer.getAddress(), tva), hello)
             
             // from later in the earlier block
-            await testQuery(new messageFinder(1, "Hello!!", await storer.getAddress()), hello)
+            await testQuery(new messageFinder(1, "Hello!!", await storer.getAddress(), tva), hello)
 
             // from earlier in the later block
-            await testQuery(new messageFinder(2, "", await storer.getAddress()), hello)
+            await testQuery(new messageFinder(2, "", await storer.getAddress(), tva), hello)
 
             // from immediately before the message in the later block
-            await testQuery(new messageFinder(2, "Hello again ", await storer.getAddress()), hello)
+            await testQuery(new messageFinder(2, "Hello again ", await storer.getAddress(), tva), hello)
         })
 
         it("Should find the first of two messages in the same block", async () => {
             // Store another message in block 2, after the current block
-            let finalMessage = await newRequest(storer, "store", ethers.utils.toUtf8Bytes("Final message here"), 2)
+            let finalMessage = await newRequest(storer, "store", ethers.utils.toUtf8Bytes("Final message here"), 2, tva)
             let fmStoreReceipt = await db.store(finalMessage)
             expect(fmStoreReceipt).to.deep.equal(await newReceipt(server, finalMessage, ethers.utils.arrayify(0)))
 
             // from the earlier message
-            await testQuery(new messageFinder(2, "Hello again!", await storer.getAddress()), helloAgain)
+            await testQuery(new messageFinder(2, "Hello again!", await storer.getAddress(), tva), helloAgain)
             
             // from between the messages
-            await testQuery(new messageFinder(2, "middling length", await storer.getAddress()), helloAgain)
+            await testQuery(new messageFinder(2, "middling length", await storer.getAddress(), tva), helloAgain)
             
             // from immediately before the later message
-            await testQuery(new messageFinder(2, "Final message herd", await storer.getAddress()), helloAgain)
+            await testQuery(new messageFinder(2, "Final message herd", await storer.getAddress(), tva), helloAgain)
             
             // from later message
-            await testQuery(new messageFinder(2, "Final message here", await storer.getAddress()), finalMessage)
+            await testQuery(new messageFinder(2, "Final message here", await storer.getAddress(), tva), finalMessage)
         })
 
         it("Should catch integer overflows", async () => {
@@ -184,7 +186,8 @@ describe("Server", () => {
                 db.find(new messageFinder(
                     ethers.BigNumber.from("9223372036854775808"),
                     "",
-                    serverAddress
+                    serverAddress,
+                    tva,
                 ))
             ).to.be.rejectedWith("Block number 9223372036854775808 overflows Postgres's bigint type")
         })

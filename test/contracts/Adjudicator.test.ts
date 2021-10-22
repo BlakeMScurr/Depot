@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import * as e from "ethers";
-import { Token, Token__factory, RelayPledge, RelayPledge__factory, ABIHack__factory, Pledge__factory, LivelinessPledge__factory, Adjudicator__factory, Adjudicator, LivelinessPledge } from "../../typechain"
+import { Token, Token__factory, RelayPledge, RelayPledge__factory, ABIHack__factory, Pledge__factory, LivelinessPledge__factory, Adjudicator__factory, Adjudicator, LivelinessPledge, TrivialValidator__factory } from "../../typechain"
 import { newRequest, newReceipt, messageFinder } from "../../client/Requests"
 
 describe("RelayPledge", function () {
@@ -9,6 +9,7 @@ describe("RelayPledge", function () {
     let livelinessPledge: LivelinessPledge;
     let relayPledge: RelayPledge;
     let adjudicator: Adjudicator;
+    let tva: string; // trivial validator address
     
     let tokenOwner: e.Signer;
     let server: e.Signer;
@@ -32,6 +33,7 @@ describe("RelayPledge", function () {
         relayPledge = await new RelayPledge__factory(pledgeLibrary, server).deploy(abiHack.address, await server.getAddress());
 
         adjudicator = await new Adjudicator__factory(server).deploy(token.address, livelinessPledge.address, relayPledge.address);
+        tva = (await new TrivialValidator__factory(server).deploy()).address;
     })
 
     describe("Adjudicator", () => {
@@ -53,7 +55,7 @@ describe("RelayPledge", function () {
             let notHonestTransaction = await adjudicator.connect(fisherman).notHonest(
                 await newReceipt(
                     server,
-                    await newRequest(requester, "store", ethers.utils.toUtf8Bytes(""), 1), // witheld
+                    await newRequest(requester, "store", ethers.utils.toUtf8Bytes(""), 1, tva), // witheld
                     ethers.utils.toUtf8Bytes(""), // server response to store is irrevelant - signature is sufficient
                 ),
                 await newReceipt(
@@ -61,10 +63,11 @@ describe("RelayPledge", function () {
                     await newRequest(
                         requester,
                         "find",
-                        new messageFinder(2, "", await requester.getAddress()).encodeAsBytes(), // target
+                        new messageFinder(2, "", await requester.getAddress(), tva).encodeAsBytes(), // target
                         10,
+                        tva,
                     ),
-                    (await newRequest(requester, "store", ethers.utils.toUtf8Bytes(""), 0)).encodeAsBytes(), // relayed
+                    (await newRequest(requester, "store", ethers.utils.toUtf8Bytes(""), 0, tva)).encodeAsBytes(), // relayed
                 )
             )
 
@@ -82,7 +85,7 @@ describe("RelayPledge", function () {
 
             // add a request to the inbox
             let bn = await ethers.provider.getBlockNumber()
-            const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some message"), bn + 2)
+            const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some message"), bn + 2, tva)
             await livelinessPledge.request(rq);
             expect(await livelinessPledge.waiting(rq.hash())).to.be.true;
             expect(await livelinessPledge.isBroken(rq.hash())).to.be.false;
