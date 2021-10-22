@@ -107,7 +107,7 @@ function encodeMessage(meta: ethers.BytesLike, message: ethers.BytesLike, user: 
   return ethers.utils.arrayify(hashed);
 }
 
-export async function newRequest(signer: ethers.Signer, meta: string, message: ethers.BytesLike, blockNumber: ethers.BigNumberish, businessLogic?: string):Promise<Request> {
+export async function newRequest(signer: ethers.Signer, meta: string, message: ethers.BytesLike, blockNumber: ethers.BigNumberish, businessLogic: string):Promise<Request> {
   let user = await signer.getAddress();
   let _meta = ethers.utils.toUtf8Bytes(meta);
   businessLogic = businessLogic || defaultBusinessLogic;

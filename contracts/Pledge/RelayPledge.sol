@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 import "./Pledge.sol";
+import "../BusinessLogic.sol";
 import "./ABIHack.sol";
 
 /**
@@ -17,7 +18,7 @@ contract RelayPledge {
         uint256 fromBlockNumber;
         bytes fromMessage;
         address byUser;
-        address businessLogic;
+        RequestValidator businessLogic;
     }
 
     ABIHack abiHack;

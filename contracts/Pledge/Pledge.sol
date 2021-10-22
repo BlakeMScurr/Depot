@@ -3,6 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "../BusinessLogic.sol";
 
 /**
  * @title ECDSA Signature Verification
@@ -19,7 +20,7 @@ library Pledge {
         bytes message;
         address user;
         uint256 blockNumber;
-        address businessLogic;
+        RequestValidator businessLogic;
         bytes signature;
     }
 

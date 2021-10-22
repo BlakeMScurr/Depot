@@ -1,11 +1,16 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import * as e from "ethers";
-import { Pledge__factory, LivelinessPledge, LivelinessPledge__factory } from "../../../typechain"
+import { Pledge__factory, LivelinessPledge, LivelinessPledge__factory, TrivialValidator__factory, TrivialValidator, NullValidator, OddMessage, NullValidator__factory, OddMessage__factory, RequestValidator } from "../../../typechain"
 import { newRequest, newReceipt } from "../../../client/Requests"
 
 describe("RelayPledge", function () {
   let livelinessPledge: LivelinessPledge;
+  let trivialValidator: TrivialValidator;
+  let tva: string; // trivial validator address
+  let nullValidator: NullValidator;
+  let oddMessage: OddMessage;
+
   let server: e.Signer;
   let requester: e.Signer;
   let serverAddress: string;
@@ -19,20 +24,24 @@ describe("RelayPledge", function () {
     const pledgeLibrary = {"contracts/Pledge/Pledge.sol:Pledge": pledge.address}
 
     livelinessPledge = await new LivelinessPledge__factory(pledgeLibrary, server).deploy(serverAddress, 10);
+    trivialValidator = await new TrivialValidator__factory(server).deploy();
+    tva = trivialValidator.address;
+    nullValidator = await new NullValidator__factory(server).deploy();
+    oddMessage = await new OddMessage__factory(server).deploy();
   })
 
   describe("LivelinessPledge", () => {
       describe("Request", () => {
         it("Should accept a valid request", async () => {
             const bn = await ethers.provider.getBlockNumber()
-            const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some message"), bn + 1);
+            const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some message"), bn + 1, tva);
             expect(await livelinessPledge.waiting(rq.hash())).to.be.false;
             await livelinessPledge.request(rq);
             expect(await livelinessPledge.waiting(rq.hash())).to.be.true;
         })
 
         it("Should reject invalid signatures", async () => {
-            const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some message"), 4)
+            const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some message"), 4, tva)
             rq.signature = await requester.signMessage(ethers.utils.toUtf8Bytes("some random signed message"));
 
             expect(await livelinessPledge.waiting(rq.hash())).to.be.false;
@@ -42,7 +51,7 @@ describe("RelayPledge", function () {
 
         it("Should reject invalid block numbers", async () => {
             const bn = await ethers.provider.getBlockNumber()
-            const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some message"), bn - 1)
+            const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some message"), bn - 1, tva)
 
             expect(await livelinessPledge.waiting(rq.hash())).to.be.false;
             await expect(livelinessPledge.request(rq)).to.be.revertedWith("Enforcement period must start in the future");
@@ -53,7 +62,7 @@ describe("RelayPledge", function () {
       describe("Request", () => {
             it("Should handle valid responses", async () => {
                 const bn = await ethers.provider.getBlockNumber()
-                const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some message"), bn + 1)
+                const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some message"), bn + 1, tva)
                 await livelinessPledge.request(rq);
                 expect(await livelinessPledge.waiting(rq.hash())).to.be.true;
     
@@ -63,8 +72,8 @@ describe("RelayPledge", function () {
             })
 
             it("Should not allow invalid hash lookups", async () => {
-                const rq1 = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some new"), 5)
-                const rq2 = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some new message"), 5)
+                const rq1 = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some new"), 5, tva)
+                const rq2 = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some new message"), 5, tva)
                 expect(await livelinessPledge.waiting(rq1.hash())).to.be.false;
                 expect(await livelinessPledge.waiting(rq2.hash())).to.be.false;
 
@@ -78,7 +87,7 @@ describe("RelayPledge", function () {
 
             it("Should require valid server signatures", async () => {
                 const bn = await ethers.provider.getBlockNumber()
-                const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some message"), bn + 1)
+                const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some message"), bn + 1, tva)
                 await livelinessPledge.request(rq);
                 expect(await livelinessPledge.waiting(rq.hash())).to.be.true;
 
@@ -94,7 +103,7 @@ describe("RelayPledge", function () {
         it("Should catch late responses", async () => {
             // Add a request to the inbox, the pledge is not yet broken
             const bn = await ethers.provider.getBlockNumber()
-            const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some message"), bn + 1)
+            const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some message"), bn + 1, tva)
             await livelinessPledge.request(rq);
             expect(await livelinessPledge.waiting(rq.hash())).to.be.true;
             expect(await livelinessPledge.isBroken(rq.hash())).to.be.false;
@@ -116,6 +125,36 @@ describe("RelayPledge", function () {
             await livelinessPledge.respond(receipt.signature, receipt.response, rq.hash());
             expect(await livelinessPledge.isBroken(rq.hash())).to.be.false;
 
+        })
+    })
+
+    describe("Business Logic", () => {
+        it("Should gate the inbox according to the business logic contracts", async () => {
+            let attempt = async (message: string, validator: RequestValidator, succeed: boolean) => {
+              const bn = await ethers.provider.getBlockNumber()
+              const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes(message), bn + 1, validator.address);
+
+              // Does it pass the validator?
+              expect(await validator.validRequest(rq)).to.eq(succeed);
+
+              // Does it get into the inbox?
+              expect(await livelinessPledge.waiting(rq.hash())).to.be.false;
+              await livelinessPledge.request(rq);
+              expect(await livelinessPledge.waiting(rq.hash())).to.eq(succeed);
+            }
+
+            await attempt("", nullValidator, false)
+            await attempt("", oddMessage, false)
+            await attempt("odd", nullValidator, false)
+
+            await attempt("", trivialValidator, true)
+            await attempt("odd", oddMessage, true)
+
+            let rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes(""), await ethers.provider.getBlockNumber() + 1, await server.getAddress());
+            await expect(livelinessPledge.request(rq)).to.be.revertedWith("function call to a non-contract account");
+
+            rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes(""), await ethers.provider.getBlockNumber() + 1, livelinessPledge.address);
+            await expect(livelinessPledge.request(rq)).to.be.revertedWith("function selector was not recognized and there's no fallback function");
         })
     })
 });
