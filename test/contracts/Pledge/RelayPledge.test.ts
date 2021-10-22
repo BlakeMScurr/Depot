@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import * as e from "ethers";
-import { ExposedRelayPledge__factory, RelayPledge__factory, ABIHack__factory, Pledge__factory, ExposedRelayPledge, RelayPledge, TrivialValidator__factory } from "../../../typechain"
+import { ExposedRelayPledge__factory, RelayPledge__factory, ABIHack__factory, Pledge__factory, ExposedRelayPledge, RelayPledge, TrivialLinter__factory } from "../../../typechain"
 import { newRequest, messageFinder, newReceipt, Request } from "../../../client/Requests"
 
 describe("RelayPledge", function () {
@@ -11,7 +11,7 @@ describe("RelayPledge", function () {
   let poster: e.Signer;
   let reader: e.Signer;
   let serverAddress: string;
-  let tva: string; // trivial validator address
+  let tva: string; // trivial linter address
   this.beforeAll(async () => {
     const signers = await ethers.getSigners();
     server = signers[1];
@@ -26,7 +26,7 @@ describe("RelayPledge", function () {
 
     relayPledge = await new RelayPledge__factory(pledgeLibrary, server).deploy(abiHack.address, serverAddress);
     exposedRelayPledge = await new ExposedRelayPledge__factory(pledgeLibrary, server).deploy(abiHack.address, serverAddress);
-    tva = (await new TrivialValidator__factory(server).deploy()).address;
+    tva = (await new TrivialLinter__factory(server).deploy()).address;
 
   })
 

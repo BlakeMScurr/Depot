@@ -20,7 +20,7 @@ library Pledge {
         bytes message;
         address user;
         uint256 blockNumber;
-        RequestValidator businessLogic;
+        RequestLinter businessLogic;
         bytes signature;
     }
 

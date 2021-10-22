@@ -16,7 +16,7 @@ contract Adjudicator is Bond {
     LivelinessPledge livelinessPledge;
     RelayPledge relayPledge;
     address server;
-    mapping(RequestValidator => bool) validators;
+    mapping(RequestLinter => bool) linters;
 
     constructor(address erc20, LivelinessPledge _livelinessPledge, RelayPledge _relayPledge, address _server) Bond(erc20){
         livelinessPledge = _livelinessPledge;
@@ -56,7 +56,7 @@ contract Adjudicator is Bond {
     */
     mapping(bytes32 => bool) guiltyValidVerdicts;
     function notValid(Pledge.Receipt memory receipt) public {
-        require(validators[receipt.request.businessLogic], "Validator has not been approved by the Silo operator"); // the owner must manually approve validators - it's easy to write a malicious validator
+        require(linters[receipt.request.businessLogic], "Linter has not been approved by the Silo operator"); // the owner must manually approve linters - it's easy to write a malicious linter
         Pledge.requireValidServerSignature(receipt, server);
         bytes32 hash = keccak256(abi.encode(receipt));
         if (!guiltyValidVerdicts[hash] && !receipt.request.businessLogic.validRequest(receipt.request)) {
@@ -68,14 +68,14 @@ contract Adjudicator is Bond {
     /**
     * @dev Pledge to abide by given logic when signing receipts
     */
-    function addValidator(RequestValidator validator) external onlyOwner {
-        validators[validator] = true;
+    function addLinter(RequestLinter linter) external onlyOwner {
+        linters[linter] = true;
     }
 
     /**
-    * @dev Convenience function to see which validators binding
+    * @dev Convenience function to see which linters binding
     */
-    function hasValidator(RequestValidator validator) external view returns (bool){
-        return validators[validator];
+    function hasLinter(RequestLinter linter) external view returns (bool){
+        return linters[linter];
     }
 }

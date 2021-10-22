@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import * as e from "ethers";
-import { Token, Token__factory, RelayPledge, RelayPledge__factory, ABIHack__factory, Pledge__factory, LivelinessPledge__factory, Adjudicator__factory, Adjudicator, LivelinessPledge, TrivialValidator__factory, TrivialValidator, OddMessage__factory, OddMessage } from "../../typechain"
+import { Token, Token__factory, RelayPledge, RelayPledge__factory, ABIHack__factory, Pledge__factory, LivelinessPledge__factory, Adjudicator__factory, Adjudicator, LivelinessPledge, TrivialLinter__factory, TrivialLinter, OddMessage__factory, OddMessage } from "../../typechain"
 import { newRequest, newReceipt, messageFinder } from "../../client/Requests"
 
 describe("RelayPledge", function () {
@@ -9,8 +9,8 @@ describe("RelayPledge", function () {
     let livelinessPledge: LivelinessPledge;
     let relayPledge: RelayPledge;
     let adjudicator: Adjudicator;
-    let tva: string; // trivial validator address
-    let trivialValidator: TrivialValidator;
+    let tva: string; // trivial linter address
+    let trivialLinter: TrivialLinter;
     let oddMessage: OddMessage;
     
     let tokenOwner: e.Signer;
@@ -35,9 +35,9 @@ describe("RelayPledge", function () {
         relayPledge = await new RelayPledge__factory(pledgeLibrary, server).deploy(abiHack.address, await server.getAddress());
 
         adjudicator = await new Adjudicator__factory(pledgeLibrary, server).deploy(token.address, livelinessPledge.address, relayPledge.address, await server.getAddress());
-        trivialValidator = await new TrivialValidator__factory(server).deploy();
+        trivialLinter = await new TrivialLinter__factory(server).deploy();
         oddMessage = await new OddMessage__factory(server).deploy();
-        tva = trivialValidator.address;
+        tva = trivialLinter.address;
     })
 
     describe("Adjudicator", () => {
@@ -107,12 +107,12 @@ describe("RelayPledge", function () {
             await token.connect(fisherman).transfer(await tokenOwner.getAddress(), 1); // clear away the tokens for the next test
         })
 
-        describe("Validators", () => {
-            it("Should allow one to add validators", async () => {
-                expect(await adjudicator.hasValidator(tva)).to.be.false
-                await expect(adjudicator.connect(fisherman).addValidator(tva)).to.be.revertedWith("Ownable: caller is not the owner")
-                await adjudicator.addValidator(tva)
-                expect(await adjudicator.hasValidator(tva)).to.be.true
+        describe("Linters", () => {
+            it("Should allow one to add linters", async () => {
+                expect(await adjudicator.hasLinter(tva)).to.be.false
+                await expect(adjudicator.connect(fisherman).addLinter(tva)).to.be.revertedWith("Ownable: caller is not the owner")
+                await adjudicator.addLinter(tva)
+                expect(await adjudicator.hasLinter(tva)).to.be.true
 
             })
 
@@ -123,9 +123,9 @@ describe("RelayPledge", function () {
                 let invalid = await newReceipt(server, await newRequest(requester, "store", ethers.utils.toUtf8Bytes("even"), 0, oddMessage.address), ethers.utils.arrayify("0x"))
                 let valid = await newReceipt(server, await newRequest(requester, "store", ethers.utils.toUtf8Bytes("odd"), 0, oddMessage.address), ethers.utils.arrayify("0x"))
 
-                // try slashing with a disallowed validator (shouldn't work)
-                await expect(adjudicator.connect(fisherman).notValid(invalid)).to.be.revertedWith("Validator has not been approved by the Silo operator");
-                await adjudicator.addValidator(oddMessage.address)
+                // try slashing with a disallowed linter (shouldn't work)
+                await expect(adjudicator.connect(fisherman).notValid(invalid)).to.be.revertedWith("Linter has not been approved by the Silo operator");
+                await adjudicator.addLinter(oddMessage.address)
 
                 // try slashing with a valid message (shouldn't work)
                 await adjudicator.connect(fisherman).notValid(valid)

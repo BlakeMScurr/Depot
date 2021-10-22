@@ -18,7 +18,7 @@ contract RelayPledge {
         uint256 fromBlockNumber;
         bytes fromMessage;
         address byUser;
-        RequestValidator businessLogic;
+        RequestLinter businessLogic;
     }
 
     ABIHack abiHack;

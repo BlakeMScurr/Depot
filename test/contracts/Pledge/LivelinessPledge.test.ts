@@ -1,16 +1,16 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import * as e from "ethers";
-import { Pledge__factory, LivelinessPledge, LivelinessPledge__factory, ImpureValidator, ImpureValidator__factory, TrivialValidator__factory, TrivialValidator, NullValidator, OddMessage, NullValidator__factory, OddMessage__factory, RequestValidator } from "../../../typechain"
+import { Pledge__factory, LivelinessPledge, LivelinessPledge__factory, ImpureLinter, ImpureLinter__factory, TrivialLinter__factory, TrivialLinter, NullLinter, OddMessage, NullLinter__factory, OddMessage__factory, RequestLinter } from "../../../typechain"
 import { newRequest, newReceipt } from "../../../client/Requests"
 
 describe("RelayPledge", function () {
   let livelinessPledge: LivelinessPledge;
-  let trivialValidator: TrivialValidator;
-  let tva: string; // trivial validator address
-  let nullValidator: NullValidator;
+  let trivialLinter: TrivialLinter;
+  let tva: string; // trivial linter address
+  let nullLinter: NullLinter;
   let oddMessage: OddMessage;
-  let impureValidator: ImpureValidator;
+  let impureLinter: ImpureLinter;
 
   let server: e.Signer;
   let requester: e.Signer;
@@ -25,11 +25,11 @@ describe("RelayPledge", function () {
     const pledgeLibrary = {"contracts/Pledge/Pledge.sol:Pledge": pledge.address}
 
     livelinessPledge = await new LivelinessPledge__factory(pledgeLibrary, server).deploy(serverAddress, 10);
-    trivialValidator = await new TrivialValidator__factory(server).deploy();
-    tva = trivialValidator.address;
-    nullValidator = await new NullValidator__factory(server).deploy();
+    trivialLinter = await new TrivialLinter__factory(server).deploy();
+    tva = trivialLinter.address;
+    nullLinter = await new NullLinter__factory(server).deploy();
     oddMessage = await new OddMessage__factory(server).deploy();
-    impureValidator = await new ImpureValidator__factory(server).deploy();
+    impureLinter = await new ImpureLinter__factory(server).deploy();
 
   })
 
@@ -133,12 +133,12 @@ describe("RelayPledge", function () {
 
     describe("Business Logic", () => {
         it("Should gate the inbox according to the business logic contracts", async () => {
-            let attempt = async (message: string, validator: RequestValidator, succeed: boolean) => {
+            let attempt = async (message: string, linter: RequestLinter, succeed: boolean) => {
               const bn = await ethers.provider.getBlockNumber()
-              const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes(message), bn + 1, validator.address);
+              const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes(message), bn + 1, linter.address);
 
-              // Does it pass the validator?
-              expect(await validator.validRequest(rq)).to.eq(succeed);
+              // Does it pass the linter?
+              expect(await linter.validRequest(rq)).to.eq(succeed);
 
               // Does it get into the inbox?
               expect(await livelinessPledge.waiting(rq.hash())).to.be.false;
@@ -146,11 +146,11 @@ describe("RelayPledge", function () {
               expect(await livelinessPledge.waiting(rq.hash())).to.eq(succeed);
             }
 
-            await attempt("", nullValidator, false)
+            await attempt("", nullLinter, false)
             await attempt("", oddMessage, false)
-            await attempt("odd", nullValidator, false)
+            await attempt("odd", nullLinter, false)
 
-            await attempt("", trivialValidator, true)
+            await attempt("", trivialLinter, true)
             await attempt("odd", oddMessage, true)
 
             let rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes(""), await ethers.provider.getBlockNumber() + 1, await server.getAddress());
@@ -159,7 +159,7 @@ describe("RelayPledge", function () {
             rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes(""), await ethers.provider.getBlockNumber() + 1, livelinessPledge.address);
             await expect(livelinessPledge.request(rq)).to.be.revertedWith("function selector was not recognized and there's no fallback function");
 
-            rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes(""), await ethers.provider.getBlockNumber() + 1, impureValidator.address);
+            rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes(""), await ethers.provider.getBlockNumber() + 1, impureLinter.address);
             // TODO: inform hardhat
             await expect(livelinessPledge.request(rq)).to.be.revertedWith("Transaction reverted and Hardhat couldn't infer the reason. Please report this to help us improve Hardhat.");
         })
