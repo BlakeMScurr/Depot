@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "../BusinessLogic.sol";
+import "../Linter.sol";
 
 /**
  * @title ECDSA Signature Verification
@@ -20,7 +20,7 @@ library Pledge {
         bytes message;
         address user;
         uint256 blockNumber;
-        RequestLinter businessLogic;
+        RequestLinter linter;
         bytes signature;
     }
 
@@ -48,7 +48,7 @@ library Pledge {
      * @return True if the signature is valid, false otherwise.
      */
     function validUserSignature(Request memory rq) public pure returns (bool) {
-        bytes32 hash = keccak256(abi.encode(rq.meta, rq.message, rq.user, rq.blockNumber, rq.businessLogic));
+        bytes32 hash = keccak256(abi.encode(rq.meta, rq.message, rq.user, rq.blockNumber, rq.linter));
         return hash.toEthSignedMessageHash().recover(rq.signature) == rq.user;
     }
 }

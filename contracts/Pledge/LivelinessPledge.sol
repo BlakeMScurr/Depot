@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
-import "../BusinessLogic.sol";
+import "../Linter.sol";
 import "./Pledge.sol";
 
 /**
@@ -46,7 +46,7 @@ contract LivelinessPledge {
     * @param rq The request.
     */
     function request(Pledge.Request memory rq) public {
-        if (!rq.businessLogic.validRequest(rq)) return;
+        if (!rq.linter.validRequest(rq)) return;
         require(Pledge.validUserSignature(rq), "Invalid signature");
         require(rq.blockNumber >= block.number, "Enforcement period must start in the future");
         inbox[keccak256(abi.encode(rq))] = RequestRecord(rq, true);

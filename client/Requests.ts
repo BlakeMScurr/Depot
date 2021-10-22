@@ -12,7 +12,7 @@ export function receiptFromJSON (json: any) {
       fixUint8Array(json.request.message),
       json.request.user,
       json.request.blockNumber,
-      json.request.businessLogic,
+      json.request.linter,
       json.request.signature,
     ),
     fixUint8Array(json.response),
@@ -41,7 +41,7 @@ export async function newReceipt(server: ethers.Signer, request: Request, respon
       request.message,
       request.user,
       request.blockNumber,
-      request.businessLogic,
+      request.linter,
       request.signature,
     ], response])
   let hashed = ethers.utils.keccak256(encoded);
@@ -57,15 +57,15 @@ export class Request {
   message: ethers.BytesLike;
   user: string;
   blockNumber: ethers.BigNumberish;
-  businessLogic: string;
+  linter: string;
   signature: ethers.BytesLike;
 
-  constructor(meta: ethers.BytesLike, message: ethers.BytesLike, user: string, blockNumber: ethers.BigNumberish, businessLogic: string, signature: string) {
+  constructor(meta: ethers.BytesLike, message: ethers.BytesLike, user: string, blockNumber: ethers.BigNumberish, linter: string, signature: string) {
     this.meta = meta;
     this.message = message;
     this.user = user;
     this.blockNumber = blockNumber;
-    this.businessLogic = businessLogic;
+    this.linter = linter;
     this.signature = signature;
   }
 
@@ -80,7 +80,7 @@ export class Request {
           this.message,
           this.user,
           this.blockNumber,
-          this.businessLogic,
+          this.linter,
           this.signature,
         ]
       ]
@@ -92,7 +92,7 @@ export class Request {
   }
 
   recoverSigner() {
-    let hashBinary = encodeMessage(this.meta, this.message, this.user, this.blockNumber, this.businessLogic)
+    let hashBinary = encodeMessage(this.meta, this.message, this.user, this.blockNumber, this.linter)
 
     // as per https://github.com/ethers-io/ethers.js/issues/447#issuecomment-470618705
     let messageHash = ethers.utils.hashMessage(hashBinary);
@@ -101,33 +101,33 @@ export class Request {
   }
 }
 
-function encodeMessage(meta: ethers.BytesLike, message: ethers.BytesLike, user: string, blockNumber: ethers.BigNumberish, businessLogic: string) {
-  let encoded = ethers.utils.defaultAbiCoder.encode(["bytes", "bytes", "address", "uint256", "address"], [meta, message, user, blockNumber, businessLogic])
+function encodeMessage(meta: ethers.BytesLike, message: ethers.BytesLike, user: string, blockNumber: ethers.BigNumberish, linter: string) {
+  let encoded = ethers.utils.defaultAbiCoder.encode(["bytes", "bytes", "address", "uint256", "address"], [meta, message, user, blockNumber, linter])
   let hashed = ethers.utils.keccak256(encoded);
   return ethers.utils.arrayify(hashed);
 }
 
-export async function newRequest(signer: ethers.Signer, meta: string, message: ethers.BytesLike, blockNumber: ethers.BigNumberish, businessLogic: string):Promise<Request> {
+export async function newRequest(signer: ethers.Signer, meta: string, message: ethers.BytesLike, blockNumber: ethers.BigNumberish, linter: string):Promise<Request> {
   let user = await signer.getAddress();
   let _meta = ethers.utils.toUtf8Bytes(meta);
 
-  let hashBinary = encodeMessage(_meta, message, user, blockNumber, businessLogic)
+  let hashBinary = encodeMessage(_meta, message, user, blockNumber, linter)
   let signature = await signer.signMessage(hashBinary);
 
-  return new Request(_meta, message, user, blockNumber, businessLogic, signature)
+  return new Request(_meta, message, user, blockNumber, linter, signature)
 }
 
 export class messageFinder {
   fromBlockNumber: ethers.BigNumberish;
   fromMessage: ethers.BytesLike;
   byUser: string;
-  businessLogic: string;
+  linter: string;
 
-  constructor(fromBlockNumber: ethers.BigNumberish, fromMessage: string, byUser: string, businessLogic: string) {
+  constructor(fromBlockNumber: ethers.BigNumberish, fromMessage: string, byUser: string, linter: string) {
     this.fromBlockNumber = fromBlockNumber;
     this.fromMessage = ethers.utils.toUtf8Bytes(fromMessage);
     this.byUser = byUser;
-    this.businessLogic = businessLogic;
+    this.linter = linter;
   }
 
   encodeAsBytes() {
@@ -140,7 +140,7 @@ export class messageFinder {
           this.fromBlockNumber,
           this.fromMessage,
           this.byUser,
-          this.businessLogic,
+          this.linter,
         ]
       ]
     ) 

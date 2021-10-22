@@ -40,7 +40,7 @@ export interface SiloDatabase {
 export async function makeSiloDB(config: ClientConfig, signer: ethers.Signer):Promise<SiloDatabase> {
     const client = new Client(config)
     await client.connect()
-    let nullReceipt = await newReceipt(signer, await newRequest(signer, "null", ethers.utils.arrayify(0), 0, defaultBusinessLogic), ethers.utils.arrayify(0))
+    let nullReceipt = await newReceipt(signer, await newRequest(signer, "null", ethers.utils.arrayify(0), 0, defaultLinter), ethers.utils.arrayify(0))
     return new postgres(client, signer, nullReceipt)
 }
 
@@ -69,7 +69,7 @@ class postgres {
             return Promise.reject(new Error(`Block number ${blockNum} overflows Postgres's bigint type`))
         }
 
-        let signedRequest = newRequest(this.signer, "find", rq.encodeAsBytes(), blockNum, defaultBusinessLogic)
+        let signedRequest = newRequest(this.signer, "find", rq.encodeAsBytes(), blockNum, defaultLinter)
         let sameBlock = await this.client.query(
             `SELECT receipt FROM receipts
             WHERE userAddress = $1
@@ -132,4 +132,4 @@ export function compareMessages(a: ethers.BytesLike, b: ethers.BytesLike):number
 }
 
 // The gitcoin address
-export const defaultBusinessLogic = "0x8ba1f109551bD432803012645Ac136ddd64DBA72"
+export const defaultLinter = "0x8ba1f109551bD432803012645Ac136ddd64DBA72"

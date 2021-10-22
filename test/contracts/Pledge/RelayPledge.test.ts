@@ -282,7 +282,7 @@ describe("RelayPledge", function () {
       expect((await exposedRelayPledge._validRelay(find, relayed.encodeAsBytes()))[1]).to.equal(false);
     })
 
-    it("Rejects messages without the specified businessLogic contract", async () => {
+    it("Rejects messages without the specified linter contract", async () => {
       let relayed = await newRequest(poster, "store", ethers.utils.toUtf8Bytes("1"), 1, tva)
       let find = new messageFinder(2, "0", await poster.getAddress(), exposedRelayPledge.address)
       expect((await exposedRelayPledge._validRelay(find, relayed.encodeAsBytes()))[1]).to.equal(false);

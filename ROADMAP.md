@@ -20,16 +20,6 @@ Note, we will require every snapshot to contain every message *at and before* it
 
 This pledge states that the order of any two merkle receipts must correspond to their order as messages.
 
-# Business Logic
-
-## Problem
-
-Suppose a developer wants to use Silo as a backend for their chat application. They could set up their own silo, and have to develop trust with users that they are running the silo well, and that their bond is sufficient, or they could run their application on a well established third party silo. This is simple, just have the chat connect to the third party Silo backend and send/threaten messages that way. We already have the functionality to force search by prefix, so chat messages can be prepended with `\x01somechat`, and we can only ask for messages with that prefix. However, anyone else using the silo could store, or have their users store, some messages with the same prefix. And if the messages were actually binary for some complex data structure, that would corrupt the data and break the user experience.
-
-## Solution
-
-The solution is to have a `businessLogicAddress` prepended instead of an arbitrary string. Then, in the livelinessPledge, the adjudicator checks that the message is valid according to some separate contract specifying the business logic. This way, the chat developer can specifiy the meaning of each message, and no one else can add corrupted messages to the server.
-
 ## Reentrancy
 
 Note, since these would be external contract calls to arbitrary unvetted contracts, we'd have to be wary of reentrancy attacks etc. Ideally we wouldn't require them to be vetted, since that would restrict the developer and introduce a choke point.

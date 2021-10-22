@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 import "./Bond.sol";
-import "./BusinessLogic.sol";
+import "./Linter.sol";
 import "./Pledge/LivelinessPledge.sol";
 import "./Pledge/RelayPledge.sol";
 
@@ -56,10 +56,10 @@ contract Adjudicator is Bond {
     */
     mapping(bytes32 => bool) guiltyValidVerdicts;
     function notValid(Pledge.Receipt memory receipt) public {
-        require(linters[receipt.request.businessLogic], "Linter has not been approved by the Silo operator"); // the owner must manually approve linters - it's easy to write a malicious linter
+        require(linters[receipt.request.linter], "Linter has not been approved by the Silo operator"); // the owner must manually approve linters - it's easy to write a malicious linter
         Pledge.requireValidServerSignature(receipt, server);
         bytes32 hash = keccak256(abi.encode(receipt));
-        if (!guiltyValidVerdicts[hash] && !receipt.request.businessLogic.validRequest(receipt.request)) {
+        if (!guiltyValidVerdicts[hash] && !receipt.request.linter.validRequest(receipt.request)) {
             super.slash(1, 5);
             guiltyValidVerdicts[hash] = true;
         }

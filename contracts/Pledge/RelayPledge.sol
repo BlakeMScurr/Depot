@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 import "./Pledge.sol";
-import "../BusinessLogic.sol";
+import "../Linter.sol";
 import "./ABIHack.sol";
 
 /**
@@ -18,7 +18,7 @@ contract RelayPledge {
         uint256 fromBlockNumber;
         bytes fromMessage;
         address byUser;
-        RequestLinter businessLogic;
+        RequestLinter linter;
     }
 
     ABIHack abiHack;
@@ -78,7 +78,7 @@ contract RelayPledge {
 
         // Validate applicability of find request to store request
         require(messageFinder.byUser == storeReceipt.request.user, "Find and store request relate to different users");
-        require(messageFinder.businessLogic == storeReceipt.request.businessLogic, "Message is for a different contract than finder");
+        require(messageFinder.linter == storeReceipt.request.linter, "Message is for a different contract than finder");
         require(messageFinder.fromBlockNumber >= storeReceipt.request.blockNumber, "Message can't be a valid response to find request: stored after find request's start block");
         if (messageFinder.fromBlockNumber == storeReceipt.request.blockNumber) {
             require(compare(messageFinder.fromMessage, storeReceipt.request.message) >= 0, "Message can't be a valid response to find request: stored after find request's start point within the same block");
@@ -123,7 +123,7 @@ contract RelayPledge {
         }
 
         // The message must have the business logic contract specified in the finder
-        if (messageFinder.businessLogic != relayed.businessLogic) {
+        if (messageFinder.linter != relayed.linter) {
             return (relayed, false);
         } 
 
