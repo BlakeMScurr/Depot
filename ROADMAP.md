@@ -75,3 +75,23 @@ The signer for each block should rotate just like the block creator at L1. This 
 ## Signer Sharding
 
 Currently we only shard in terms of time, but we could shard across the address space, such that there are multiple signers per block.
+
+# Rich Querying
+
+If silo is to serve as a backend to crud style apps, we need richer querying capabilities. Basic operations that would generally require one cheap API call in a traditional web2 app should ideally only require one call to Silo, and be verifiable in some small, ideally constant number of steps. For example, we are currently able to search from a given point in a list of messages, matching on user and linter (i.e., business logic) in a single request, and a single party can verify ordering with a request per earlier message, and one request per earlier user in the same block (this ought to be improved too).
+
+Some basic use cases for richer querying:
+    - Finding the highest offer in an NFT marketplace
+    - Most recent post by any user for a social media feed
+
+## Snark snapshots
+
+By adding a snark to the snapshot, we can reduce the proof of correct response down to a constant size, and respond in a single API call. This will also be useful in proving richer queries.
+
+Rather than just having to commit to the merkle root of a snapshot, the server could also be required to provide a zk-snark that proves that the data in the merkle tree is well ordered. If the user knows that each snapshot it ordered, then showing the returned message and the ones on either side proves that it's the right message, and (assuming that it's ordered by user too), showing the two users on either side proves that there is no message.
+
+Note: this may make the relay pledge entirely obselete!!!
+
+## Merkle DAG
+
+Suppose we have an NFT marketplace, where users make offers to one another, and the offer is in some uint256 field. The linter contract can require a specific format for messages, and we can isolate the uint256 using indices in the bytes of the message. Now we can write a separate indexing function in the business logic that orders messages by offer price, and sorts them by NFTs they're offered for. We can write this indexing function in Cairo (etc), and upload a snark prover, now the server can order the the marketplace part of the merkle tree by offer, produce a snark showing it was done correctly, and provide the snark to the onchain indexing function. If the server asserts that it will provide a snark for a given indexing function for every snapshot, then find requests based on message logic can be proven in the same simple steps outlined above. For example, to find the highest offer for an NFT, we just show that there is no higher offer by showing that the next chunk in the tree belongs to the next NFT, or we show that there are no offers by showing that two surrounding NFTs are directly adjacent to one another.
