@@ -4,7 +4,8 @@ import * as chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised.default)
 
 import { ethers } from "hardhat";
-import { compareMessages, handleRequest, makeSiloDB, SiloDatabase, validateRequest } from "../../server/logic";
+import { handleRequest, validateRequest } from "../../server/signer";
+import { compareMessages, makeSiloDB, SiloDatabase } from "../../server/db";
 import { messageFinder, newReceipt, newRequest, Receipt, Request } from "../../client/Requests"
 import * as e from "ethers";
 import { ABIHack__factory, OddMessage, OddMessage__factory, Pledge__factory, RelayPledge, RelayPledge__factory, TrivialLinter__factory, TrivialLinter } from "../../typechain";
@@ -72,15 +73,16 @@ describe("Server", () => {
 
     describe("Database", () => {
         let db: SiloDatabase;
-        let hello: Request;
-        let helloAgain: Request;
+        let hello: Receipt;
+        let helloAgain: Receipt;
+        let finalMessageTL: Receipt; // final main user trivial linter message
         let relayPledge: RelayPledge;
         before(async () => {
             // TODO: make test db in the style of https://stackoverflow.com/a/61725901/7371580
             let config = { database: "testsilo" }
             db = await makeSiloDB(
                 config,
-                server,
+                await newReceipt(server, await newRequest(server, "null", ethers.utils.arrayify(0), 0, tla), ethers.utils.arrayify(0)),
             )
 
             // TODO: simplify so that we don't make two clients (one here and one inside makeSiloDB)
@@ -88,8 +90,9 @@ describe("Server", () => {
             await client.connect()
             await client.query('TRUNCATE TABLE receipts')
 
-            hello = await newRequest(storer, "store", ethers.utils.toUtf8Bytes("Hello!"), 1, tla)
-            helloAgain = await newRequest(storer, "store", ethers.utils.toUtf8Bytes("Hello again!"), 2, tla)
+            hello = await newReceipt(server, await newRequest(storer, "store", ethers.utils.toUtf8Bytes("Hello!"), 1, tla), ethers.utils.arrayify(0))
+            helloAgain = await newReceipt(server, await newRequest(storer, "store", ethers.utils.toUtf8Bytes("Hello again!"), 2, tla), ethers.utils.arrayify(0))
+            finalMessageTL = await newReceipt(server, await newRequest(storer, "store", ethers.utils.toUtf8Bytes("Final message here"), 2, tla), ethers.utils.arrayify(0))
 
             const abiHack = await new ABIHack__factory(server).deploy();
 
@@ -106,25 +109,23 @@ describe("Server", () => {
         })
 
         it("Should find the most recent of two stored messages", async () => {
-            let hStoreReceipt = await db.store(hello)
-            let haStoreReceipt = await db.store(helloAgain)
-            expect(hStoreReceipt).to.deep.equal(await newReceipt(server, hello, ethers.utils.arrayify(0)))
-            expect(haStoreReceipt).to.deep.equal(await newReceipt(server, helloAgain, ethers.utils.arrayify(0)))
+            await db.store(hello)
+            await db.store(helloAgain)
 
             let fr = new messageFinder(3, "", await storer.getAddress(), tla)
-            let findReceipt = await newReceipt(server, await newRequest(server, "find", fr.encodeAsBytes(), 4, tla), helloAgain.encodeAsBytes())
+            let findReceipt = await newReceipt(server, await newRequest(server, "find", fr.encodeAsBytes(), 4, tla), helloAgain.request.encodeAsBytes())
 
             expect(
                 await db.find(fr)
-            ).to.eql(haStoreReceipt)
+            ).to.eql(helloAgain)
 
             expect(await relayPledge.isBroken(
-                hStoreReceipt,
+                hello,
                 findReceipt,
             )).to.equal(false);
 
             expect(await relayPledge.isBroken(
-                haStoreReceipt,
+                helloAgain,
                 findReceipt,
             )).to.equal(false);
         })
@@ -141,15 +142,14 @@ describe("Server", () => {
             ).to.deep.equal(db.nullReceipt())
         })
 
-        let testQuery = async (fr: messageFinder, expected: Request) => {
-            let storeReceipt = await newReceipt(server, expected, ethers.utils.arrayify(0))
-            let findReceipt = await newReceipt(server, await newRequest(server, "find", fr.encodeAsBytes(), 4, fr.linter), expected.encodeAsBytes())
+        let testQuery = async (fr: messageFinder, expected: Receipt) => {
+            let findReceipt = await newReceipt(server, await newRequest(server, "find", fr.encodeAsBytes(), 4, fr.linter), expected.request.encodeAsBytes())
             expect(
                 await db.find(fr)
-            ).to.deep.equal(storeReceipt)
+            ).to.deep.equal(expected)
 
             expect(await relayPledge.isBroken(
-                storeReceipt,
+                expected,
                 findReceipt,
             )).to.equal(false);
         }
@@ -170,9 +170,7 @@ describe("Server", () => {
 
         it("Should find the first of two messages in the same block", async () => {
             // Store another message in block 2, after the current block
-            let finalMessage = await newRequest(storer, "store", ethers.utils.toUtf8Bytes("Final message here"), 2, tla)
-            let fmStoreReceipt = await db.store(finalMessage)
-            expect(fmStoreReceipt).to.deep.equal(await newReceipt(server, finalMessage, ethers.utils.arrayify(0)))
+            await db.store(finalMessageTL)
 
             // from the earlier message
             await testQuery(new messageFinder(2, "Hello again!", await storer.getAddress(), tla), helloAgain)
@@ -184,19 +182,16 @@ describe("Server", () => {
             await testQuery(new messageFinder(2, "Final message herd", await storer.getAddress(), tla), helloAgain)
             
             // from later message
-            await testQuery(new messageFinder(2, "Final message here", await storer.getAddress(), tla), finalMessage)
+            await testQuery(new messageFinder(2, "Final message here", await storer.getAddress(), tla), finalMessageTL)
         })
 
         it("Should only find requests for a given linter", async () => {
                 // Store a request from another linter early in the history
-                let oddLinterRequest = await newRequest(storer, "store", ethers.utils.toUtf8Bytes("odd"), 0, oddMessage.address)
-                let fmStoreReceipt = await db.store(oddLinterRequest)
-                expect(fmStoreReceipt).to.deep.equal(await newReceipt(server, oddLinterRequest, ethers.utils.arrayify(0)))
-
-                let trivialLinterRequest = await newRequest(storer, "store", ethers.utils.toUtf8Bytes("Final message here"), 2, tla)
+                let oddLinterRequest = await newReceipt(server, await newRequest(storer, "store", ethers.utils.toUtf8Bytes("odd"), 0, oddMessage.address), ethers.utils.arrayify(0))
+                await db.store(oddLinterRequest)
 
                 // can still find the most recent request for the trivial linter
-                await testQuery(new messageFinder(3, "", await storer.getAddress(), tla), trivialLinterRequest)
+                await testQuery(new messageFinder(3, "", await storer.getAddress(), tla), finalMessageTL)
 
                 // odd linter finds its own request from the same point
                 await testQuery(new messageFinder(3, "", await storer.getAddress(), oddMessage.address), oddLinterRequest)
@@ -204,21 +199,18 @@ describe("Server", () => {
 
         it("Should only find messages from a given user", async () => {
             // Store a request from another user early in the history
-            let newUserRequest = await newRequest(storer2, "store", ethers.utils.toUtf8Bytes("other user"), 0, tla)
-            let fmStoreReceipt = await db.store(newUserRequest)
-            expect(fmStoreReceipt).to.deep.equal(await newReceipt(server, newUserRequest, ethers.utils.arrayify(0)))
-
-            let normalUserRequest = await newRequest(storer, "store", ethers.utils.toUtf8Bytes("Final message here"), 2, tla)
+            let newUserRequest = await newReceipt(server, await newRequest(storer2, "store", ethers.utils.toUtf8Bytes("other user"), 0, tla), ethers.utils.arrayify(0))
+            await db.store(newUserRequest)
 
             // can still find the most recent request from the storer
-            await testQuery(new messageFinder(3, "", await storer.getAddress(), tla), normalUserRequest)
+            await testQuery(new messageFinder(3, "", await storer.getAddress(), tla), finalMessageTL)
 
             // odd linter finds its own request from the same point
             await testQuery(new messageFinder(3, "", await storer2.getAddress(), tla), newUserRequest)
         })
 
         it("Should catch integer overflows", async () => {
-            let serverAddress = await await server.getAddress()
+            let serverAddress = await server.getAddress()
             return expect(
                 db.find(new messageFinder(
                     ethers.BigNumber.from("9223372036854775808"),

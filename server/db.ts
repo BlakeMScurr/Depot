@@ -1,66 +1,33 @@
 // core logic for the server
 import { ethers } from 'ethers';
 import { Client, ClientConfig } from 'pg';
-import * as lpArtifact from "../artifacts/contracts/Pledge/LivelinessPledge.sol/LivelinessPledge.json";
 import { messageFinder, newReceipt, newRequest, Receipt, receiptFromJSON, Request } from '../client/Requests';
 
-const lp = new ethers.utils.Interface(lpArtifact.abi);
-
-export async function handleRequest(siloRequest: any, provider: ethers.providers.Provider) {
-    validateRequest(siloRequest, provider)
-    let rq: Request = siloRequest;
-    switch (ethers.utils.toUtf8String(rq.meta)) {
-        case "store":
-        case "find":
-        default:
-            throw new Error("Unknown request type: " + ethers.utils.toUtf8String(rq.meta))
-    }
-}
-
-export async function validateRequest(siloRequest: any, provider: ethers.providers.Provider) {
-    lp.encodeFunctionData("request", [siloRequest]);
-    let r: Request = siloRequest
-
-    if (r.recoverSigner() != r.user) {
-        throw new Error("Invalid signature")
-    }
-
-    let bn = await provider.getBlockNumber()
-    if (r.blockNumber < bn) {
-        throw new Error("Enforcement period for offchain request must start in the future")
-    }
-}
-
 export interface SiloDatabase {
-    store(rq: Request):Promise<Receipt>
+    store(rq: Receipt):Promise<void>
     find(rq: messageFinder):Promise<Receipt>
     nullReceipt():Receipt
 }
 
-export async function makeSiloDB(config: ClientConfig, signer: ethers.Signer):Promise<SiloDatabase> {
+export async function makeSiloDB(config: ClientConfig, nullReceipt: Receipt):Promise<SiloDatabase> {
     const client = new Client(config)
     await client.connect()
-    let nullReceipt = await newReceipt(signer, await newRequest(signer, "null", ethers.utils.arrayify(0), 0, defaultLinter), ethers.utils.arrayify(0))
-    return new postgres(client, signer, nullReceipt)
+    return new postgres(client, nullReceipt)
 }
 
 class postgres {
     private _nullReceipt: Receipt
-    private signer: ethers.Signer;
     private client: Client;
 
-    constructor(client: Client, signer: ethers.Signer, nullReceipt: Receipt) {
+    constructor(client: Client, nullReceipt: Receipt) {
         this._nullReceipt = nullReceipt;
         this.client = client;
-        this.signer = signer;
     }
 
-    async store(rq: Request):Promise<Receipt> {
-        let receipt = await newReceipt(this.signer, rq, ethers.utils.arrayify(0))
+    async store(receipt: Receipt):Promise<void> {
         await this.client.query(
             'INSERT INTO receipts (userAddress, linterAddress, message, block, receipt) VALUES ($1, $2, $3, $4, $5)',
             [receipt.request.user, receipt.request.linter, receipt.request.message, receipt.request.blockNumber, receipt])
-        return receipt
     }
 
     // finds all receipts from a given block and finds the most recent receipt from that block before a given point
@@ -135,6 +102,3 @@ export function compareMessages(a: ethers.BytesLike, b: ethers.BytesLike):number
     }
     return 0;
 }
-
-// The gitcoin address
-export const defaultLinter = "0x8ba1f109551bD432803012645Ac136ddd64DBA72"

@@ -1,5 +1,5 @@
 import * as http from "http";
-import { handleRequest } from "./logic";
+import { handleRequest } from "./signer";
 
 http.createServer(function(request, response) {
     const chunks = [];
