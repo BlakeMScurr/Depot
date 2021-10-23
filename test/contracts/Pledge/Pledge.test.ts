@@ -9,7 +9,7 @@ describe("RelayPledge", function () {
     let server: e.Signer;
     let user: e.Signer;
     let serverAddress: string;
-    let tva: string; // trivial linter address
+    let tla: string; // trivial linter address
     this.beforeAll(async () => {
         const signers = await ethers.getSigners();
         server = signers[0];
@@ -17,17 +17,17 @@ describe("RelayPledge", function () {
         serverAddress = await server.getAddress();
         const pledgeLibrary = {"contracts/Pledge/Pledge.sol:Pledge": (await new Pledge__factory(server).deploy()).address}
         pledge = await new ExposedPledgeLibrary__factory(pledgeLibrary, server).deploy();
-        tva = (await new TrivialLinter__factory(server).deploy()).address;
+        tla = (await new TrivialLinter__factory(server).deploy()).address;
     })
 
     describe("Pledge", () => {
         it("Should allow valid user signatures on requests", async () => {
-            const rq = await newRequest(user, "meta", ethers.utils.toUtf8Bytes("some message"), 0, tva);
+            const rq = await newRequest(user, "meta", ethers.utils.toUtf8Bytes("some message"), 0, tla);
             expect(await pledge.validUserSignature(rq)).to.be.true;
         })
 
         it("Should reject invalid signatures", async () => {
-            const rq = await newRequest(user, "meta", ethers.utils.toUtf8Bytes("some message"), 0, tva);
+            const rq = await newRequest(user, "meta", ethers.utils.toUtf8Bytes("some message"), 0, tla);
             rq.signature = await user.signMessage(ethers.utils.toUtf8Bytes("some other message"));
             expect(await pledge.validUserSignature(rq)).to.be.false;
 
@@ -36,13 +36,13 @@ describe("RelayPledge", function () {
         })
 
         it("Should allow valid server signatures on requests", async () => {
-            const rq = await newRequest(user, "meta", ethers.utils.toUtf8Bytes("some message"), 0, tva);
+            const rq = await newRequest(user, "meta", ethers.utils.toUtf8Bytes("some message"), 0, tla);
             const receipt = await newReceipt(server, rq, ethers.utils.toUtf8Bytes("some response"));
             await(expect(pledge.requireValidServerSignature(receipt, await server.getAddress())).not.to.be.revertedWith(""));
         })
 
         it("Should reject invalid server signatures", async () => {
-            const rq = await newRequest(user, "meta", ethers.utils.toUtf8Bytes("some message"), 0, tva);
+            const rq = await newRequest(user, "meta", ethers.utils.toUtf8Bytes("some message"), 0, tla);
             const receipt = await newReceipt(server, rq, ethers.utils.toUtf8Bytes("some response"));
             receipt.signature = await user.signMessage(ethers.utils.toUtf8Bytes("some other message"));
             await(expect(pledge.requireValidServerSignature(receipt, await server.getAddress())).to.be.revertedWith("Server signature must be valid"));

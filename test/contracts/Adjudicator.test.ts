@@ -9,7 +9,7 @@ describe("RelayPledge", function () {
     let livelinessPledge: LivelinessPledge;
     let relayPledge: RelayPledge;
     let adjudicator: Adjudicator;
-    let tva: string; // trivial linter address
+    let tla: string; // trivial linter address
     let trivialLinter: TrivialLinter;
     let oddMessage: OddMessage;
     
@@ -37,7 +37,7 @@ describe("RelayPledge", function () {
         adjudicator = await new Adjudicator__factory(pledgeLibrary, server).deploy(token.address, livelinessPledge.address, relayPledge.address, await server.getAddress());
         trivialLinter = await new TrivialLinter__factory(server).deploy();
         oddMessage = await new OddMessage__factory(server).deploy();
-        tva = trivialLinter.address;
+        tla = trivialLinter.address;
     })
 
     describe("Adjudicator", () => {
@@ -59,7 +59,7 @@ describe("RelayPledge", function () {
             let notHonestTransaction = await adjudicator.connect(fisherman).notHonest(
                 await newReceipt(
                     server,
-                    await newRequest(requester, "store", ethers.utils.toUtf8Bytes(""), 1, tva), // witheld
+                    await newRequest(requester, "store", ethers.utils.toUtf8Bytes(""), 1, tla), // witheld
                     ethers.utils.toUtf8Bytes(""), // server response to store is irrevelant - signature is sufficient
                 ),
                 await newReceipt(
@@ -67,11 +67,11 @@ describe("RelayPledge", function () {
                     await newRequest(
                         requester,
                         "find",
-                        new messageFinder(2, "", await requester.getAddress(), tva).encodeAsBytes(), // target
+                        new messageFinder(2, "", await requester.getAddress(), tla).encodeAsBytes(), // target
                         10,
-                        tva,
+                        tla,
                     ),
-                    (await newRequest(requester, "store", ethers.utils.toUtf8Bytes(""), 0, tva)).encodeAsBytes(), // relayed
+                    (await newRequest(requester, "store", ethers.utils.toUtf8Bytes(""), 0, tla)).encodeAsBytes(), // relayed
                 )
             )
 
@@ -89,7 +89,7 @@ describe("RelayPledge", function () {
 
             // add a request to the inbox
             let bn = await ethers.provider.getBlockNumber()
-            const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some message"), bn + 2, tva)
+            const rq = await newRequest(requester, "store", ethers.utils.toUtf8Bytes("some message"), bn + 2, tla)
             await livelinessPledge.request(rq);
             expect(await livelinessPledge.waiting(rq.hash())).to.be.true;
             expect(await livelinessPledge.isBroken(rq.hash())).to.be.false;
@@ -109,10 +109,10 @@ describe("RelayPledge", function () {
 
         describe("Linters", () => {
             it("Should allow one to add linters", async () => {
-                expect(await adjudicator.hasLinter(tva)).to.be.false
-                await expect(adjudicator.connect(fisherman).addLinter(tva)).to.be.revertedWith("Ownable: caller is not the owner")
-                await adjudicator.addLinter(tva)
-                expect(await adjudicator.hasLinter(tva)).to.be.true
+                expect(await adjudicator.hasLinter(tla)).to.be.false
+                await expect(adjudicator.connect(fisherman).addLinter(tla)).to.be.revertedWith("Ownable: caller is not the owner")
+                await adjudicator.addLinter(tla)
+                expect(await adjudicator.hasLinter(tla)).to.be.true
 
             })
 
