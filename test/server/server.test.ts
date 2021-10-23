@@ -7,7 +7,7 @@ import { ethers } from "hardhat";
 import { compareMessages, handleRequest, makeSiloDB, SiloDatabase, validateRequest } from "../../server/logic";
 import { messageFinder, newReceipt, newRequest, Receipt, Request } from "../../client/Requests"
 import * as e from "ethers";
-import { ABIHack__factory, Pledge__factory, RelayPledge, RelayPledge__factory } from "../../typechain";
+import { ABIHack__factory, OddMessage, OddMessage__factory, Pledge__factory, RelayPledge, RelayPledge__factory, TrivialLinter__factory, TrivialLinter } from "../../typechain";
 import { Client } from "pg";
 import { orderedMessages } from "../contracts/Pledge/RelayPledge.test";
 
@@ -15,13 +15,18 @@ describe("Server", () => {
     let server: e.Signer;
     let storer: e.Signer;
     let provider: e.providers.Provider;
-    let tva: string; // trivial validator address
+    let tva: string; // trivial linter address
+    let trivialLinter: TrivialLinter;
+    let oddMessage: OddMessage;
+
     before(async () => {
         let signers = await ethers.getSigners();
         server = signers[0]
         storer = signers[1]
         provider = await ethers.provider;
-        tva = await server.getAddress() // since this is offchain we don't need a real contract address - the quickest/dirtiest validly formatted address will do
+        trivialLinter = await new TrivialLinter__factory(server).deploy();
+        oddMessage = await new OddMessage__factory(server).deploy();
+        tva = trivialLinter.address;
     })
 
     describe("Handle request", () => {
@@ -63,7 +68,7 @@ describe("Server", () => {
         })
     })
 
-    describe("database", () => {
+    describe("Database", () => {
         let db: SiloDatabase;
         let hello: Request;
         let helloAgain: Request;
@@ -136,7 +141,7 @@ describe("Server", () => {
 
         let testQuery = async (fr: messageFinder, expected: Request) => {
             let storeReceipt = await newReceipt(server, expected, ethers.utils.arrayify(0))
-            let findReceipt = await newReceipt(server, await newRequest(server, "find", fr.encodeAsBytes(), 3, tva), expected.encodeAsBytes())
+            let findReceipt = await newReceipt(server, await newRequest(server, "find", fr.encodeAsBytes(), 4, fr.linter), expected.encodeAsBytes())
             expect(
                 await db.find(fr)
             ).to.deep.equal(storeReceipt)
@@ -178,6 +183,22 @@ describe("Server", () => {
             
             // from later message
             await testQuery(new messageFinder(2, "Final message here", await storer.getAddress(), tva), finalMessage)
+        })
+
+        it("Should only find messages with the defined linter", async () => {
+                // Store a message from another linter early in the history
+                let oddLinterRequest = await newRequest(storer, "store", ethers.utils.toUtf8Bytes("odd"), 0, oddMessage.address)
+                let fmStoreReceipt = await db.store(oddLinterRequest)
+                expect(fmStoreReceipt).to.deep.equal(await newReceipt(server, oddLinterRequest, ethers.utils.arrayify(0)))
+
+                let trivialLinterRequest = await newRequest(storer, "store", ethers.utils.toUtf8Bytes("Final message here"), 2, tva)
+
+                // trivial linter still finds its own most recent
+                await testQuery(new messageFinder(3, "", await storer.getAddress(), tva), trivialLinterRequest)
+
+                // odd linter finds its own request from the same point
+                await testQuery(new messageFinder(3, "", await storer.getAddress(), oddMessage.address), oddLinterRequest)
+
         })
 
         it("Should catch integer overflows", async () => {

@@ -57,24 +57,26 @@ class postgres {
 
     async store(rq: Request):Promise<Receipt> {
         let receipt = await newReceipt(this.signer, rq, ethers.utils.arrayify(0))
-        await this.client.query('INSERT INTO receipts (userAddress, message, block, receipt) VALUES ($1, $2, $3, $4)', [receipt.request.user, receipt.request.message, receipt.request.blockNumber, receipt])
+        await this.client.query(
+            'INSERT INTO receipts (userAddress, linterAddress, message, block, receipt) VALUES ($1, $2, $3, $4, $5)',
+            [receipt.request.user, receipt.request.linter, receipt.request.message, receipt.request.blockNumber, receipt])
         return receipt
     }
 
     // finds all receipts from a given block and finds the most recent receipt from that block before a given point
     // if there is no message before that point, find all messages from the last block with messages, and return the most recent
-    async find(rq: messageFinder):Promise<Receipt> {
-        let blockNum = ethers.BigNumber.from(rq.fromBlockNumber)
+    async find(mf: messageFinder):Promise<Receipt> {
+        let blockNum = ethers.BigNumber.from(mf.fromBlockNumber)
         if (blockNum.gt(ethers.BigNumber.from("9223372036854775807"))) {
             return Promise.reject(new Error(`Block number ${blockNum} overflows Postgres's bigint type`))
         }
 
-        let signedRequest = newRequest(this.signer, "find", rq.encodeAsBytes(), blockNum, defaultLinter)
         let sameBlock = await this.client.query(
             `SELECT receipt FROM receipts
             WHERE userAddress = $1
-            AND block = $2`,
-            [rq.byUser, blockNum.toBigInt()]
+            AND linterAddress = $2
+            AND block = $3`,
+            [mf.byUser, mf.linter, blockNum.toBigInt()]
         )
 
         if (sameBlock.rows.length != 0) {
@@ -82,7 +84,7 @@ class postgres {
             let filtered = sameBlock.rows.map((row) => {
                 return receiptFromJSON(row.receipt)
             }).filter((receipt) => {
-                return compareMessages(receipt.request.message, rq.fromMessage) <= 0
+                return compareMessages(receipt.request.message, mf.fromMessage) <= 0
             })
 
             // return the highest receipt
@@ -96,11 +98,14 @@ class postgres {
         let previousBlock = await this.client.query(
             `SELECT receipt FROM receipts
             WHERE userAddress = $1
+            AND linterAddress = $2
             AND block = (
                 SELECT MAX(block) FROM receipts
-                WHERE block < $2
+                WHERE block < $3
+                AND userAddress = $1
+                AND linterAddress = $2
             )`,
-            [rq.byUser, blockNum.toBigInt()]
+            [mf.byUser, mf.linter, blockNum.toBigInt()]
         )
 
         if (previousBlock.rows.length != 0) {
