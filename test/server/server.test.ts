@@ -14,6 +14,7 @@ import { orderedMessages } from "../contracts/Pledge/RelayPledge.test";
 describe("Server", () => {
     let server: e.Signer;
     let storer: e.Signer;
+    let storer2: e.Signer;
     let provider: e.providers.Provider;
     let tla: string; // trivial linter address
     let trivialLinter: TrivialLinter;
@@ -23,6 +24,7 @@ describe("Server", () => {
         let signers = await ethers.getSigners();
         server = signers[0]
         storer = signers[1]
+        storer2 = signers[2]
         provider = await ethers.provider;
         trivialLinter = await new TrivialLinter__factory(server).deploy();
         oddMessage = await new OddMessage__factory(server).deploy();
@@ -185,20 +187,34 @@ describe("Server", () => {
             await testQuery(new messageFinder(2, "Final message here", await storer.getAddress(), tla), finalMessage)
         })
 
-        it("Should only find messages with the defined linter", async () => {
-                // Store a message from another linter early in the history
+        it("Should only find requests for a given linter", async () => {
+                // Store a request from another linter early in the history
                 let oddLinterRequest = await newRequest(storer, "store", ethers.utils.toUtf8Bytes("odd"), 0, oddMessage.address)
                 let fmStoreReceipt = await db.store(oddLinterRequest)
                 expect(fmStoreReceipt).to.deep.equal(await newReceipt(server, oddLinterRequest, ethers.utils.arrayify(0)))
 
                 let trivialLinterRequest = await newRequest(storer, "store", ethers.utils.toUtf8Bytes("Final message here"), 2, tla)
 
-                // trivial linter still finds its own most recent
+                // can still find the most recent request for the trivial linter
                 await testQuery(new messageFinder(3, "", await storer.getAddress(), tla), trivialLinterRequest)
 
                 // odd linter finds its own request from the same point
                 await testQuery(new messageFinder(3, "", await storer.getAddress(), oddMessage.address), oddLinterRequest)
+        })
 
+        it("Should only find messages from a given user", async () => {
+            // Store a request from another user early in the history
+            let newUserRequest = await newRequest(storer2, "store", ethers.utils.toUtf8Bytes("other user"), 0, tla)
+            let fmStoreReceipt = await db.store(newUserRequest)
+            expect(fmStoreReceipt).to.deep.equal(await newReceipt(server, newUserRequest, ethers.utils.arrayify(0)))
+
+            let normalUserRequest = await newRequest(storer, "store", ethers.utils.toUtf8Bytes("Final message here"), 2, tla)
+
+            // can still find the most recent request from the storer
+            await testQuery(new messageFinder(3, "", await storer.getAddress(), tla), normalUserRequest)
+
+            // odd linter finds its own request from the same point
+            await testQuery(new messageFinder(3, "", await storer2.getAddress(), tla), newUserRequest)
         })
 
         it("Should catch integer overflows", async () => {
