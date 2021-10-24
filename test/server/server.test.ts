@@ -4,9 +4,9 @@ import * as chaiAsPromised from "chai-as-promised";
 chai.use(chaiAsPromised.default)
 
 import { ethers } from "hardhat";
-import { handleRequest, validateRequest } from "../../server/signer";
+import { ReceiptSigner } from "../../server/signer";
 import { compareMessages, makeSiloDB, SiloDatabase } from "../../server/db";
-import { messageFinder, newReceipt, newRequest, Receipt, Request } from "../../client/Requests"
+import { decodeMessageFinder, messageFinder, newReceipt, newRequest, Receipt, Request } from "../../client/Requests"
 import * as e from "ethers";
 import { ABIHack__factory, OddMessage, OddMessage__factory, Pledge__factory, RelayPledge, RelayPledge__factory, TrivialLinter__factory, TrivialLinter } from "../../typechain";
 import { Client } from "pg";
@@ -20,6 +20,10 @@ describe("Server", () => {
     let tla: string; // trivial linter address
     let trivialLinter: TrivialLinter;
     let oddMessage: OddMessage;
+    let db: SiloDatabase;
+    let rs: ReceiptSigner;
+    let dbConfig = { database: "testsilo" }
+    let relayPledge: RelayPledge;
 
     before(async () => {
         let signers = await ethers.getSigners();
@@ -30,76 +34,110 @@ describe("Server", () => {
         trivialLinter = await new TrivialLinter__factory(server).deploy();
         oddMessage = await new OddMessage__factory(server).deploy();
         tla = trivialLinter.address;
+
+        // TODO: make test db in the style of https://stackoverflow.com/a/61725901/7371580
+        db = await makeSiloDB(
+            dbConfig,
+            await newReceipt(server, await newRequest(server, "null", ethers.utils.arrayify(0), 0, tla), ethers.utils.arrayify(0)),
+        )
+        rs = new ReceiptSigner(server, ethers.provider, db)
+
+        const abiHack = await new ABIHack__factory(server).deploy();
+
+        const pledge = await new Pledge__factory(server).deploy();
+        const pledgeLibrary = {"contracts/Pledge/Pledge.sol:Pledge": pledge.address}
+
+        relayPledge = await new RelayPledge__factory(pledgeLibrary, server).deploy(abiHack.address, await server.getAddress());
     })
 
-    describe("Handle request", () => {
-        it("Should reject unknown request types", async () => {
-            let bn = await ethers.provider.getBlockNumber()
-            let rq = await newRequest(server, "junk", ethers.utils.toUtf8Bytes("message"), bn, tla)
-            await expect(handleRequest(rq, provider)).to.be.rejectedWith("Unknown request type: junk")
-        })
-    })
+    
+    describe("Receipt signer", () => {
+        let stored: Request;
+        before(async () => {
+            const client = new Client(dbConfig)
+            await client.connect()
+            await client.query('TRUNCATE TABLE receipts')
 
-    describe("Validate request", () => {
-        it("Should accept valid requests", async () => {
             let bn = await ethers.provider.getBlockNumber()
-            let rq = await newRequest(server, "meta", ethers.utils.toUtf8Bytes("message"), bn, tla)
-            await expect(validateRequest(rq, provider)).not.to.be.rejected
+            stored = await newRequest(server, "store", ethers.utils.toUtf8Bytes("message"), bn, tla)
         })
 
-        it("Should reject invalid types", async () => {
-            await expect(validateRequest(9, provider)).to.be.rejected
-            await expect(validateRequest({ some: "some", junk: "junk"}, provider)).to.be.rejected
-            let rq: any = await newRequest(server, "meta", ethers.utils.toUtf8Bytes("message"), 5, tla)
-            rq.blockNumber = "bn"
-            await expect(validateRequest(rq, provider)).to.be.rejected
+        it("Should decode message finders", async () => {
+            let mf = new messageFinder(123, "message", await storer.getAddress(), tla)
+            expect(decodeMessageFinder(mf.encodeAsBytes())).to.deep.eq(mf)
         })
 
-        it("Should reject invalid signatures", async () => {
-            let bn = await ethers.provider.getBlockNumber()
-            let rq = await newRequest(server, "meta", ethers.utils.toUtf8Bytes("message"), bn, tla)
-            rq.signature = await server.signMessage(ethers.utils.toUtf8Bytes("asdf"))
-            await expect(validateRequest(rq, provider)).to.be.rejected
-        })
-        
-        it("Should reject outdated requests", async() => {
-            await ethers.provider.send("evm_mine", [])
-            let bn = await ethers.provider.getBlockNumber()
-            let rq = await newRequest(server, "meta", ethers.utils.toUtf8Bytes("message"), bn-1, tla)
-            await expect(validateRequest(rq, provider)).to.be.rejectedWith("Enforcement period for offchain request must start in the future")
+        describe("Handle Request", () => {
+            it("Should return a receipt for storing a message", async () => {
+                expect(await rs.handleRequest(stored)).to.deep.eq(await newReceipt(server, stored, ethers.utils.arrayify(0)))
+            })
 
+            it("Should let new request in but not old ones", async () => {
+                let bn = await ethers.provider.getBlockNumber()
+                let rq = await newRequest(server, "find", new messageFinder(ethers.BigNumber.from(stored.blockNumber).add(1), "", stored.user, stored.linter).encodeAsBytes(), bn+10, tla)
+                let findReceipt = await newReceipt(server, rq, stored.encodeAsBytes())
+                expect(await rs.handleRequest(rq)).to.deep.eq(findReceipt)
+
+                // try to put an old and outdated request in
+                await ethers.provider.send("evm_mine", []);
+                let old = await newRequest(server, "store", ethers.utils.toUtf8Bytes("old yet after stored message"), stored.blockNumber, tla)
+                await expect(rs.handleRequest(old)).to.be.rejectedWith("Enforcement period for offchain request must start in the future")
+
+                // make a find receipt with the server's key, implying we put the old request. This makes the earlier find request invalid.
+                expect(await relayPledge.isBroken(await newReceipt(server, stored, ethers.utils.arrayify(0)), findReceipt)).to.be.false
+                expect(await relayPledge.isBroken(await newReceipt(server, old, ethers.utils.arrayify(0)), findReceipt)).to.be.true
+            })
+
+            it("Should reject unknown request types", async () => {
+                let bn = await ethers.provider.getBlockNumber()
+                let rq = await newRequest(server, "junk", ethers.utils.toUtf8Bytes("message"), bn, tla)
+                await expect(rs.handleRequest(rq)).to.be.rejectedWith("Unknown request type: junk")
+            })
+        })
+
+        describe("Validate request", () => {
+            it("Should accept valid requests", async () => {
+                let bn = await ethers.provider.getBlockNumber()
+                let rq = await newRequest(server, "meta", ethers.utils.toUtf8Bytes("message"), bn, tla)
+                await expect(rs.validateRequest(rq)).not.to.be.rejected
+            })
+    
+            it("Should reject invalid types", async () => {
+                await expect(rs.validateRequest(9)).to.be.rejected
+                await expect(rs.validateRequest({ some: "some", junk: "junk"})).to.be.rejected
+                let rq: any = await newRequest(server, "meta", ethers.utils.toUtf8Bytes("message"), 5, tla)
+                rq.blockNumber = "bn"
+                await expect(rs.validateRequest(rq)).to.be.rejected
+            })
+    
+            it("Should reject invalid signatures", async () => {
+                let bn = await ethers.provider.getBlockNumber()
+                let rq = await newRequest(server, "meta", ethers.utils.toUtf8Bytes("message"), bn, tla)
+                rq.signature = await server.signMessage(ethers.utils.toUtf8Bytes("asdf"))
+                await expect(rs.validateRequest(rq)).to.be.rejected
+            })
+            
+            it("Should reject outdated requests", async() => {
+                let bn = await ethers.provider.getBlockNumber()
+                let rq = await newRequest(server, "meta", ethers.utils.toUtf8Bytes("message"), bn-1, tla)
+                await expect(rs.validateRequest(rq)).to.be.rejectedWith("Enforcement period for offchain request must start in the future")
+            })
         })
     })
 
     describe("Database", () => {
-        let db: SiloDatabase;
         let hello: Receipt;
         let helloAgain: Receipt;
         let finalMessageTL: Receipt; // final main user trivial linter message
-        let relayPledge: RelayPledge;
         before(async () => {
-            // TODO: make test db in the style of https://stackoverflow.com/a/61725901/7371580
-            let config = { database: "testsilo" }
-            db = await makeSiloDB(
-                config,
-                await newReceipt(server, await newRequest(server, "null", ethers.utils.arrayify(0), 0, tla), ethers.utils.arrayify(0)),
-            )
-
             // TODO: simplify so that we don't make two clients (one here and one inside makeSiloDB)
-            const client = new Client(config)
+            const client = new Client(dbConfig)
             await client.connect()
             await client.query('TRUNCATE TABLE receipts')
 
             hello = await newReceipt(server, await newRequest(storer, "store", ethers.utils.toUtf8Bytes("Hello!"), 1, tla), ethers.utils.arrayify(0))
             helloAgain = await newReceipt(server, await newRequest(storer, "store", ethers.utils.toUtf8Bytes("Hello again!"), 2, tla), ethers.utils.arrayify(0))
             finalMessageTL = await newReceipt(server, await newRequest(storer, "store", ethers.utils.toUtf8Bytes("Final message here"), 2, tla), ethers.utils.arrayify(0))
-
-            const abiHack = await new ABIHack__factory(server).deploy();
-
-            const pledge = await new Pledge__factory(server).deploy();
-            const pledgeLibrary = {"contracts/Pledge/Pledge.sol:Pledge": pledge.address}
-
-            relayPledge = await new RelayPledge__factory(pledgeLibrary, server).deploy(abiHack.address, await server.getAddress());
         })
 
         it("Should find nothing if nothing is stored", async () => {

@@ -1,11 +1,12 @@
 import * as ethers from "ethers";
 
+// TODO: use custom JSON deserializer that handles Uint8Arrays
+function fixUint8Array(thing: any):Uint8Array {
+  let entries: [string, string][] = Object.entries(thing)
+  return Uint8Array.from(entries.map((v) => { return parseInt(v[1])}))
+}
+
 export function receiptFromJSON (json: any) {
-  // TODO: use custom JSON deserializer that handles Uint8Arrays
-  let fixUint8Array = (thing: any) => {
-    let entries: [string, string][] = Object.entries(thing)
-    return Uint8Array.from(entries.map((v) => { return parseInt(v[1])}))
-  }
   let receipt = new Receipt(
     new Request(
       fixUint8Array(json.request.meta),
@@ -124,7 +125,7 @@ export class messageFinder {
   linter: string;
 
   constructor(fromBlockNumber: ethers.BigNumberish, fromMessage: string, byUser: string, linter: string) {
-    this.fromBlockNumber = fromBlockNumber;
+    this.fromBlockNumber = ethers.BigNumber.from(fromBlockNumber);
     this.fromMessage = ethers.utils.toUtf8Bytes(fromMessage);
     this.byUser = byUser;
     this.linter = linter;
@@ -133,7 +134,7 @@ export class messageFinder {
   encodeAsBytes() {
     return ethers.utils.defaultAbiCoder.encode(
       [
-        "tuple(uint256, bytes, address, address)",
+        messageFinderABI,
       ],
       [
         [
@@ -145,4 +146,11 @@ export class messageFinder {
       ]
     ) 
   }
+}
+
+const messageFinderABI = "tuple(uint256, bytes, address, address)"
+
+export function decodeMessageFinder (bytes: ethers.utils.BytesLike):messageFinder {
+  let result = ethers.utils.defaultAbiCoder.decode([messageFinderABI], bytes)[0]
+  return new messageFinder(result[0], ethers.utils.toUtf8String(result[1]), result[2], result[3])
 }

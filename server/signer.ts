@@ -1,30 +1,49 @@
 import { ethers } from 'ethers';
-import { Request } from '../client/Requests';
+import { decodeMessageFinder, messageFinder, newReceipt, Receipt, Request } from '../client/Requests';
 import * as lpArtifact from "../artifacts/contracts/Pledge/LivelinessPledge.sol/LivelinessPledge.json";
+import { SiloDatabase } from './db';
 
 const lp = new ethers.utils.Interface(lpArtifact.abi);
+export class ReceiptSigner {
+    signer: ethers.Signer;
+    provider: ethers.providers.Provider;
+    db: SiloDatabase;
+    constructor (signer: ethers.Signer, provider: ethers.providers.Provider, db: SiloDatabase) {
+        this.signer = signer;
+        this.provider = provider;
+        this.db = db;
+    }
 
-export async function handleRequest(siloRequest: any, provider: ethers.providers.Provider) {
-    validateRequest(siloRequest, provider)
-    let rq: Request = siloRequest;
-    switch (ethers.utils.toUtf8String(rq.meta)) {
-        case "store":
-        case "find":
-        default:
-            throw new Error("Unknown request type: " + ethers.utils.toUtf8String(rq.meta))
+    async handleRequest(siloRequest: any) {
+        await this.validateRequest(siloRequest)
+        let rq: Request = siloRequest;
+
+        switch (ethers.utils.toUtf8String(rq.meta)) {
+            case "store":
+                let receipt = await newReceipt(this.signer, rq, ethers.utils.arrayify(0));
+                await this.db.store(receipt);
+                return receipt;
+            case "find":
+                let finder = decodeMessageFinder(rq.message);
+                let storeReceipt = await this.db.find(finder);
+                return await newReceipt(this.signer, rq, storeReceipt.request.encodeAsBytes());
+            default:
+                throw new Error("Unknown request type: " + ethers.utils.toUtf8String(rq.meta))
+        }
+    }
+    
+    async validateRequest(siloRequest: any) {
+        lp.encodeFunctionData("request", [siloRequest]);
+        let r: Request = siloRequest
+    
+        if (r.recoverSigner() != r.user) {
+            throw new Error("Invalid signature")
+        }
+    
+        let bn = await this.provider.getBlockNumber()
+        if (r.blockNumber < bn) {
+            throw new Error("Enforcement period for offchain request must start in the future")
+        }
     }
 }
 
-export async function validateRequest(siloRequest: any, provider: ethers.providers.Provider) {
-    lp.encodeFunctionData("request", [siloRequest]);
-    let r: Request = siloRequest
-
-    if (r.recoverSigner() != r.user) {
-        throw new Error("Invalid signature")
-    }
-
-    let bn = await provider.getBlockNumber()
-    if (r.blockNumber < bn) {
-        throw new Error("Enforcement period for offchain request must start in the future")
-    }
-}
