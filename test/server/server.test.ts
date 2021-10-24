@@ -122,6 +122,21 @@ describe("Server", () => {
                 let rq = await newRequest(server, "meta", ethers.utils.toUtf8Bytes("message"), bn-1, tla)
                 await expect(rs.validateRequest(rq)).to.be.rejectedWith("Enforcement period for offchain request must start in the future")
             })
+
+            it("Should reject invalid request formats (according to their own linters)", async () => {
+                let bn = await ethers.provider.getBlockNumber()
+                let rq = await newRequest(server, "meta", ethers.utils.toUtf8Bytes("even"), bn, oddMessage.address)
+                await expect(rs.validateRequest(rq)).to.be.rejectedWith("Invalid request format: failed lint")
+            })
+
+            it("Should reject requests for linters that don't even exist", async () => {
+                let bn = await ethers.provider.getBlockNumber()
+                let rq = await newRequest(server, "meta", ethers.utils.toUtf8Bytes("even"), bn, "0xDe30da39c46104798bB5aA3fe8B9e0e1F348163F") // gitcoin address
+                await expect(rs.validateRequest(rq)).to.be.rejectedWith("call revert exception")
+                
+                rq = await newRequest(server, "meta", ethers.utils.toUtf8Bytes("even"), bn, relayPledge.address)
+                await expect(rs.validateRequest(rq)).to.be.rejectedWith("Transaction reverted: function selector was not recognized and there's no fallback function")
+            })
         })
     })
 

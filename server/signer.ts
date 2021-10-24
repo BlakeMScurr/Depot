@@ -2,6 +2,7 @@ import { ethers } from 'ethers';
 import { decodeMessageFinder, messageFinder, newReceipt, Receipt, Request } from '../client/Requests';
 import * as lpArtifact from "../artifacts/contracts/Pledge/LivelinessPledge.sol/LivelinessPledge.json";
 import { SiloDatabase } from './db';
+import { RequestLinter__factory } from '../typechain';
 
 const lp = new ethers.utils.Interface(lpArtifact.abi);
 export class ReceiptSigner {
@@ -38,6 +39,10 @@ export class ReceiptSigner {
     
         if (r.recoverSigner() != r.user) {
             throw new Error("Invalid signature")
+        }
+
+        if(!await RequestLinter__factory.connect(r.linter, this.provider).validRequest(r)) {
+            throw new Error("Invalid request format: failed lint")
         }
     
         let bn = await this.provider.getBlockNumber()
