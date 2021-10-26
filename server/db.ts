@@ -27,7 +27,7 @@ class postgres {
     async store(receipt: Receipt):Promise<void> {
         await this.client.query(
             'INSERT INTO receipts (userAddress, linterAddress, message, block, receipt) VALUES ($1, $2, $3, $4, $5)',
-            [receipt.request.user, receipt.request.linter, receipt.request.message, receipt.request.blockNumber, receipt])
+            [receipt.request.user, receipt.request.linter, receipt.request.message, receipt.request.blockNumber.toBigInt(), receipt])
     }
 
     // finds all receipts from a given block and finds the most recent receipt from that block before a given point

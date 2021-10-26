@@ -3,6 +3,7 @@ import { ethers } from "hardhat";
 import * as e from "ethers";
 import { Pledge__factory, LivelinessPledge, LivelinessPledge__factory, ImpureLinter, ImpureLinter__factory, TrivialLinter__factory, TrivialLinter, NullLinter, OddMessage, NullLinter__factory, OddMessage__factory, RequestLinter } from "../../../typechain"
 import { newRequest, newReceipt } from "../../../client/Requests"
+import { Postman } from "../../../server/postman"
 
 describe("RelayPledge", function () {
   let livelinessPledge: LivelinessPledge;
@@ -11,10 +12,12 @@ describe("RelayPledge", function () {
   let nullLinter: NullLinter;
   let oddMessage: OddMessage;
   let impureLinter: ImpureLinter;
+  let postman: Postman;
 
   let server: e.Signer;
   let requester: e.Signer;
   let serverAddress: string;
+
   this.beforeAll(async () => {
     const signers = await ethers.getSigners();
     server = signers[0];
@@ -31,6 +34,7 @@ describe("RelayPledge", function () {
     oddMessage = await new OddMessage__factory(server).deploy();
     impureLinter = await new ImpureLinter__factory(server).deploy();
 
+    postman = new Postman(ethers.provider, livelinessPledge)
   })
 
   describe("LivelinessPledge", () => {
@@ -41,6 +45,8 @@ describe("RelayPledge", function () {
             expect(await livelinessPledge.waiting(rq.hash())).to.be.false;
             await livelinessPledge.request(rq);
             expect(await livelinessPledge.waiting(rq.hash())).to.be.true;
+
+            expect(await postman.getAllRequests()).to.deep.eq([rq])
         })
 
         it("Should reject invalid signatures", async () => {

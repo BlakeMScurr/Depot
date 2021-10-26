@@ -26,7 +26,8 @@ contract LivelinessPledge {
         bool waiting;
     }
 
-    mapping(bytes32 => RequestRecord) inbox;
+    mapping(bytes32 => RequestRecord) public inbox;
+    bytes32[] public hashes;
     address serverSigner;
     uint256 leeway;
 
@@ -49,7 +50,9 @@ contract LivelinessPledge {
         if (!rq.linter.validRequest(rq)) return;
         require(Pledge.validUserSignature(rq), "Invalid signature");
         require(rq.blockNumber >= block.number, "Enforcement period must start in the future");
-        inbox[keccak256(abi.encode(rq))] = RequestRecord(rq, true);
+        bytes32 hash = keccak256(abi.encode(rq));
+        inbox[hash] = RequestRecord(rq, true);
+        hashes.push(hash);
     }
 
     /**
@@ -68,18 +71,22 @@ contract LivelinessPledge {
     }
 
     /**
-    * @dev Whether the request is waiting the inbox.
+    * @dev Returns whether a request has been left without a response too long.
+    * @param requestHash hash of the request that hasn't been responded to.
+    */
+    function isBroken(bytes32 requestHash) public view returns (bool) {
+        return inbox[requestHash].waiting && inbox[requestHash].request.blockNumber + leeway < block.number;
+    }
+
+    /**
+    * @dev Whether the request is waiting the inbox (offchain utility method).
     * @param requestHash hash of the request being look up.
     */
     function waiting(bytes32 requestHash) public view returns (bool) {
         return inbox[requestHash].waiting;
     }
 
-    /**
-    * @dev Returns whether a request has been left without a response too long.
-    * @param requestHash hash of the request that hasn't been responded to.
-    */
-    function isBroken(bytes32 requestHash) public view returns (bool) {
-        return inbox[requestHash].waiting && inbox[requestHash].request.blockNumber + leeway < block.number;
+    function getHashes() public view returns (bytes32[] memory) {
+        return hashes;
     }
 }

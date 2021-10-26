@@ -1,22 +1,18 @@
 import * as ethers from "ethers";
 
-// TODO: use custom JSON deserializer that handles Uint8Arrays
-function fixUint8Array(thing: any):Uint8Array {
-  let entries: [string, string][] = Object.entries(thing)
-  return Uint8Array.from(entries.map((v) => { return parseInt(v[1])}))
+// TODO: use custom JSON deserializer that handles BytesLike
+function fixBytesLike(thing: any):ethers.BytesLike {
+  if (typeof thing === 'object') {
+    let entries: [string, string][] = Object.entries(thing)
+    return Uint8Array.from(entries.map((v) => { return parseInt(v[1])}))
+  }
+  return ethers.utils.arrayify(thing);
 }
 
-export function receiptFromJSON (json: any) {
+export function receiptFromJSON(json: any) {
   let receipt = new Receipt(
-    new Request(
-      fixUint8Array(json.request.meta),
-      fixUint8Array(json.request.message),
-      json.request.user,
-      json.request.blockNumber,
-      json.request.linter,
-      json.request.signature,
-    ),
-    fixUint8Array(json.response),
+    Request.fromJSON(json.request),
+    fixBytesLike(json.response),
     json.signature,
   )
   return receipt
@@ -57,7 +53,7 @@ export class Request {
   meta: ethers.BytesLike;
   message: ethers.BytesLike;
   user: string;
-  blockNumber: ethers.BigNumberish;
+  blockNumber: ethers.BigNumber;
   linter: string;
   signature: ethers.BytesLike;
 
@@ -65,7 +61,7 @@ export class Request {
     this.meta = meta;
     this.message = message;
     this.user = user;
-    this.blockNumber = blockNumber;
+    this.blockNumber = ethers.BigNumber.from(blockNumber);
     this.linter = linter;
     this.signature = signature;
   }
@@ -73,7 +69,7 @@ export class Request {
   encodeAsBytes() {
     return ethers.utils.defaultAbiCoder.encode(
       [
-        "tuple(bytes, bytes, address, uint256, address, bytes)",
+        Request.abi(),
       ],
       [
         [
@@ -99,6 +95,21 @@ export class Request {
     let messageHash = ethers.utils.hashMessage(hashBinary);
     let messageHashBytes = ethers.utils.arrayify(messageHash);
     return ethers.utils.recoverAddress(messageHashBytes, this.signature)
+  }
+
+  static abi():string {
+    return "tuple(bytes, bytes, address, uint256, address, bytes)";
+  }
+
+  static fromJSON(json: any):Request {
+    return new Request(
+      fixBytesLike(json.meta),
+      fixBytesLike(json.message),
+      json.user,
+      json.blockNumber,
+      json.linter,
+      json.signature,
+    )
   }
 }
 

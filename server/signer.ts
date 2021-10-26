@@ -46,7 +46,7 @@ export class ReceiptSigner {
         }
     
         let bn = await this.provider.getBlockNumber()
-        if (r.blockNumber < bn) {
+        if (r.blockNumber.lt(bn)) {
             throw new Error("Enforcement period for offchain request must start in the future")
         }
     }
