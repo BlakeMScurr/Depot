@@ -32,11 +32,11 @@ func verify_valid_location(loc: Location*):
     return ()
 end
 
-func verify_adjacent_locations(loc0: Location*, loc1: Location*) {
+func verify_adjacent_locations(loc0: Location*, loc1: Location*):
     alloc_locals
     local row_diff = loc0.row - loc1.row
     local col_diff = loc0.column - loc1.column
-    if row_diff = 0:
+    if row_diff == 0:
         assert col_diff * col_diff = 1
         return ()
     else:
@@ -55,4 +55,5 @@ func verify_location_list(loc_list: Location*, n_steps):
 
     verify_adjacent_locations(loc0=loc_list, loc1=loc_list + Location.SIZE)
     verify_location_list(loc_list=loc_list + Location.SIZE, n_steps=n_steps - 1)
+    return ()
 end
