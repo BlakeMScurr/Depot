@@ -9,3 +9,6 @@ server/**/*.js
 cache
 artifacts
 typechain
+
+# Cairo build artifacts
+cairo/*.json
