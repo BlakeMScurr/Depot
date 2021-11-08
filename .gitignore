@@ -13,3 +13,5 @@ typechain
 # Cairo build artifacts
 cairo/*.json
 cairo/*.zip
+**/*.pyc
+cairo/__pycache__/
