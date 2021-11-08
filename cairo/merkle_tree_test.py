@@ -21,5 +21,10 @@ async def test_merkle_layer():
         source=CONTRACT_FILE,
     )
 
+    assert await contract.merkle_layer([], 0).invoke() == (0,)
     assert await contract.merkle_layer([0], 0).invoke() == (1,)
-    assert await contract.merkle_layer([1], 0).invoke() == (1,)
+    assert await contract.merkle_layer([69], 0).invoke() == (1,)
+    assert await contract.merkle_layer([1,2], 0).invoke() == (1,)
+    assert await contract.merkle_layer([1,2,3], 0).invoke() == (2,)
+    assert await contract.merkle_layer([1,2,3,4], 0).invoke() == (2,)
+    assert await contract.merkle_layer([1,2,3,4,5,6,7,8,9], 0).invoke() == (5,)

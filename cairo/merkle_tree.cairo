@@ -22,8 +22,9 @@ func merkle_layer{pedersen_ptr : HashBuiltin*}(elems_len: felt, elems: felt*, ha
     if 2*hash_index == elems_len:
         return (0)
     end
-    # If there were an odd number of elem, we add the last hash to the end of the layer
-    let hash_offset = elems+elems_len+hash_index
+
+    # If there were an odd number of elements, we add the last hash to the end of the layer
+    let hash_offset = elems+elems_len+hash_index+1
     if 2*hash_index+1 == elems_len:
         assert [hash_offset] = [elems+elems_len-1]
         return (1)
@@ -33,7 +34,7 @@ func merkle_layer{pedersen_ptr : HashBuiltin*}(elems_len: felt, elems: felt*, ha
     let (h) = hash2{hash_ptr=pedersen_ptr}(
         [elems+hash_index*2], [elems+hash_index*2+1]
     )
-    assert [hash_offset] = [h]
+    assert [hash_offset] = h
 
     # recurse along the list
     let (next_len) = merkle_layer(elems_len=elems_len, elems=elems, hash_index=hash_index+1)
