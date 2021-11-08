@@ -7,9 +7,12 @@
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.hash import hash2
 
-func test_merkle_layer{pedersen_ptr : HashBuiltin*}(elems_len: felt, elems: felt*) -> (vals_len: felt, vals: felt*):
+# tester function that shows the next merkle layer
+# TODO: return the whole lot, though (@guthl) apparently we can't return a felt*
+@external
+func val_in_next_layer{pedersen_ptr : HashBuiltin*}(elems_len: felt, elems: felt*, index: felt) -> (val):
     let (next_len) = merkle_layer(elems_len, elems, 0)
-    return (next_len, elems + elems_len)
+    return ([elems + elems_len + index])
 end
 
 # Computes the next layer of a merkle tree
@@ -17,7 +20,7 @@ end
 # length is the number of elements in the layer
 # hash_index is the index to place the hash in in the next layer
 @external
-func merkle_layer{pedersen_ptr : HashBuiltin*}(elems_len: felt, elems: felt*, hash_index: felt) -> (next_len: felt):
+func merkle_layer{pedersen_ptr : HashBuiltin*}(elems_len: felt, elems: felt*, hash_index: felt) -> (next_len):
     # base case: if we're out of elem, return the elem of the next layer and its length
     if 2*hash_index == elems_len:
         return (0)
