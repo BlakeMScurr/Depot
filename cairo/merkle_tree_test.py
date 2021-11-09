@@ -23,24 +23,23 @@ async def test_merkle_layer():
     )
 
     assert (await contract.merkle_layer([], 0).invoke()).result == (0,)
-    assert (await contract.val_in_next_layer([], 0).invoke()).result == (0,)
 
     assert (await contract.merkle_layer([0], 0).invoke()).result == (1,)
     assert (await contract.val_in_next_layer([0], 0).invoke()).result == (0,)
 
     assert (await contract.merkle_layer([69], 0).invoke()).result == (1,)
-    # assert (await contract.val_in_next_layer([69], 0).invoke()).result == (69,)
+    assert (await contract.val_in_next_layer([69], 0).invoke()).result == (69,)
 
     assert (await contract.merkle_layer([1,2], 0).invoke()).result == (1,)
-    # assert (await contract.val_in_next_layer([1,2], 1).invoke()).result == (pedersen_hash(1,2),)
+    assert (await contract.val_in_next_layer([1,2], 0).invoke()).result == (pedersen_hash(1,2),)
 
     assert (await contract.merkle_layer([1,2,3], 0).invoke()).result == (2,)
-    # assert (await contract.val_in_next_layer([1,2,3], 0).invoke()).result == (pedersen_hash(1,2),)
-    # assert (await contract.val_in_next_layer([1,2,3], 1).invoke()).result == (3,)
+    assert (await contract.val_in_next_layer([1,2,3], 0).invoke()).result == (pedersen_hash(1,2),)
+    assert (await contract.val_in_next_layer([1,2,3], 1).invoke()).result == (3,)
 
     assert (await contract.merkle_layer([1,2,3,4], 0).invoke()).result == (2,)
-    # assert (await contract.val_in_next_layer([1,2,3,4], 1).invoke()).result == (pedersen_hash(3,4),)
+    assert (await contract.val_in_next_layer([1,2,3,4], 1).invoke()).result == (pedersen_hash(3,4),)
 
     assert (await contract.merkle_layer([1,2,3,4,5,6,7,8,9], 0).invoke()).result == (5,)
-    # assert (await contract.val_in_next_layer([1,2,3,4,5,6,7,8,9], 3).invoke()).result == (pedersen_hash(7,8),)
-    # assert (await contract.val_in_next_layer([1,2,3,4,5,6,7,8,9], 4).invoke()).result == (9,)
+    assert (await contract.val_in_next_layer([1,2,3,4,5,6,7,8,9], 3).invoke()).result == (pedersen_hash(7,8),)
+    assert (await contract.val_in_next_layer([1,2,3,4,5,6,7,8,9], 4).invoke()).result == (9,)

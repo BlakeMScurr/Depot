@@ -12,7 +12,7 @@ from starkware.cairo.common.hash import hash2
 @external
 func val_in_next_layer{pedersen_ptr : HashBuiltin*}(elems_len: felt, elems: felt*, index: felt) -> (val):
     let (next_len) = merkle_layer(elems_len, elems, 0)
-    return ([elems + elems_len + index])
+    return ([elems + elems_len + index + 1]) # +1 accounts for the memory cell after the array assigned to 0
 end
 
 # Computes the next layer of a merkle tree
@@ -27,6 +27,9 @@ func merkle_layer{pedersen_ptr : HashBuiltin*}(elems_len: felt, elems: felt*, ha
     end
 
     # If there were an odd number of elements, we add the last hash to the end of the layer
+    # @guthl, it seems like the element at elems + elems_len is set to 0, even though there is not a zero element explicitly set there,
+    # is this some kind of terminus? We add 1 to get to the first unassigned memory cell.
+    # TODO: try to remove the +1
     let hash_offset = elems+elems_len+hash_index+1
     if 2*hash_index+1 == elems_len:
         assert [hash_offset] = [elems+elems_len-1]
