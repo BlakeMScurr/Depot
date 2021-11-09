@@ -10,30 +10,6 @@ from starkware.cairo.common.signature import (
 # This program takes a snapshot of a store, and proves that the store is a superset of a previous snapshot.
 # It also proves that all messages in the snapshot are stored in order.
 
-# Returns a hash committing to the request's state using the
-# following formula:
-#   H(H(H(H(meta, requestLinter), user), blockNumber, message1) ...
-# where H is the Pedersen hash function.
-# TODO: replace with hash_chain
-func hash_request(r : Request*) -> (res : felt):
-    let res = r.meta
-    let (res) = hash2{hash_ptr=pedersen_ptr}(
-        res, r.requestLinter)
-    let (res) = hash2{hash_ptr=pedersen_ptr}(
-        res, r.user)
-    let (res) = hash2{hash_ptr=pedersen_ptr}(
-        res, r.blockNumber)
-    let (res) = hash2{hash_ptr=pedersen_ptr}(
-        res, r.message1)
-    let (res) = hash2{hash_ptr=pedersen_ptr}(
-        res, r.message2)
-    let (res) = hash2{hash_ptr=pedersen_ptr}(
-        res, r.message3)
-    let (res) = hash2{hash_ptr=pedersen_ptr}(
-        res, r.message4)
-    return (res=res)
-end
-
 # Asserts that all the requests in the store are ordered
 func all_ordered{range_check_ptr}(curr_request : Request*, n_requests : felt):
     if n_requests == 1:
@@ -45,7 +21,7 @@ func all_ordered{range_check_ptr}(curr_request : Request*, n_requests : felt):
     return all_ordered(curr_request + 1, n_requests-1)
 end
 
-# Checks a is less than or equal to b. Ordered by requestLinter, then user, blockNumber, messageLength, and finally numerically by message (where felts are interpretted as non negative integers)
+# Checks a is less than or equal to b. Ordered by requestLinter, then user, then blockNumber, and finally numerically by message (where felts are interpretted as non negative integers)
 func request_le{range_check_ptr}(a: Request*, b: Request*):
     assert_nn_le(a.requestLinter, b.requestLinter)
     if a.requestLinter == b.requestLinter:
@@ -67,24 +43,6 @@ func request_le{range_check_ptr}(a: Request*, b: Request*):
         end
     end
     return ()
-end
-
-# A signed request from a user to be stored in the silo.
-struct Request:
-    member meta : felt              # the meta of a stored message is always "store", i.e., 0 as a felt 
-    member requestLinter : felt     # ethereum address of the contract that defines the format of the message (@guthl, can we store eth addresses as a felt? felt is only 2^252, whereas ethereum addresses are 32 bytes)
-    member user_pub_key : felt      # EC Public Key corresponding to the ethereum EOC of the user (@guthl presumably we can store ecdsa pub keys as felts, since it's done here https://www.cairo-lang.org/docs/hello_cairo/voting.html?highlight=ecdsa#processing-the-program-input) (@guthl I'd rather store the ethereum address instead, is there ecrecover yet? or is that what's meant by "Support for ethereum signatures as a Cairo function" in v.0.6.0?)
-    member blockNumber : felt       # the ethereum block number at which the message was stored
-    # v0 has a fixed message size of 124 bytes (4 252 bit felts) which is basically a twitter message
-    member message1 : felt
-    member message2 : felt
-    member message3 : felt
-    member message4 : felt
-    
-    # TODO: handle Ethereum signatures once it's included in v.0.6.0
-    # ECDSA signature of all above fields, including user_pub_key
-    # member signature_r : felt
-    # member signature_s : felt
 end
 
 # Read requests from program input

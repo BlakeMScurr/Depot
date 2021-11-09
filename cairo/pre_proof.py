@@ -19,3 +19,10 @@ def merkle_layer(leaves):
             nextLayer.append(leaves[i])
     print("nextLayer:", nextLayer)
     return nextLayer
+
+def chain_hash(vals):
+    hash = pedersen_hash(vals[0], vals[1])
+    for val in vals[2:]:
+        hash = pedersen_hash(hash, val)
+    return hash
+
