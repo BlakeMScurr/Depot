@@ -71,7 +71,7 @@ async def test_merkle_tree():
     assert merkleTree1to5 == merkle_tree([1,2,3,4,5])
 
 @pytest.mark.asyncio
-async def test_merkle_tree():
+async def test_hash_single_request():
     starknet = await Starknet.empty()
     contract = await starknet.deploy(
         source=CONTRACT_FILE,
@@ -100,4 +100,23 @@ async def test_merkle_tree():
         pedersen_hash(
         pedersen_hash(0,1),2),3),4),5),6),7),8),9)
     assert inchash == chain_hash([0,1,2,3,4,5,6,7,8,9])
-        
+
+@pytest.mark.asyncio
+async def test_hash_request_tree():
+    starknet = await Starknet.empty()
+    contract = await starknet.deploy(
+        source=CONTRACT_FILE,
+    )
+
+    # expect (somewhat) randomly built request trees to hash as normally
+
+    # expect failure if meta is not 0, as 0 represents "store" and only stored messages should be found in the snapshot
+
+    # expect failure for out of order requests
+    # ensure we fail if we are out of order by requestLinter, user, blockNumber, message1, message2, message3, or message4
+
+    # expect failure for two totally identical messages being included
+    
+    # expect failure when any message is stored after the specified block (i.e., ensure all messages are before a certain block)
+
+

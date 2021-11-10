@@ -1,6 +1,7 @@
 %lang starknet
 
 from merkle_tree import merkle_layer, merkle_tree, hash_request, Request
+from snapshot import hash_request_tree
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.alloc import alloc
 
@@ -49,7 +50,8 @@ end
 # TODO: arbitrary length so we can test other length trees (i.e., 0, 7, 8, etc, where the tree behaviour is slightly different)
 # @guthl, any ideas on how to pass testing data in? I think unit testing basically requires %lang starknet, which means I can't use hints.
 @external
-func hash_request_tree_t{pedersen_ptr : HashBuiltin*}(
+func hash_request_tree_t{range_check_ptr, pedersen_ptr : HashBuiltin*}(
+        blockNumber,
         meta_1, requestLinter_1, user_1, blockNumber_1, message1_1, message2_1, message3_1, message4_1, signature_r_1, signature_s_1,
         meta_2, requestLinter_2, user_2, blockNumber_2, message1_2, message2_2, message3_2, message4_2, signature_r_2, signature_s_2,
         meta_3, requestLinter_3, user_3, blockNumber_3, message1_3, message2_3, message3_3, message4_3, signature_r_3, signature_s_3,
@@ -112,5 +114,6 @@ func hash_request_tree_t{pedersen_ptr : HashBuiltin*}(
     [rq + 48] = signature_r_5
     [rq + 49] = signature_s_5
 
-    hash_request_tree(5, cast(rq, Request*))
+    let (res) = hash_request_tree(blockNumber, 5, cast(rq, Request*))
+    return (res)
 end
