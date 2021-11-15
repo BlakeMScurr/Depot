@@ -108,7 +108,24 @@ async def test_hash_request_tree():
         source=CONTRACT_FILE,
     )
 
-    # expect (somewhat) randomly built request trees to hash as normally
+    # expect basic request trees to hash as normally
+    # root_hash = (await contract.hash_request_tree_t(
+    #     5,
+    #     # meta  rql user    bn  1   2   3   4   r   s
+    #     0,      0,  1,      1,  0,  0,  0,  0,  0,  0,
+    #     0,      0,  1,      1,  1,  0,  0,  0,  0,  0,
+    #     0,      0,  1,      2,  0,  0,  0,  0,  0,  0,
+    #     0,      0,  3,      2,  0,  0,  0,  0,  0,  0,
+    #     0,      0,  4,      5,  0,  0,  0,  0,  0,  0,
+    # ).invoke()).result.root_hash
+
+    # assert root_hash == merkle_tree([
+    #     chain_hash([0,      0,  1,      1,  0,  0,  0,  0,  0,  0]),
+    #     chain_hash([0,      0,  1,      1,  1,  0,  0,  0,  0,  0]),
+    #     chain_hash([0,      0,  1,      2,  0,  0,  0,  0,  0,  0]),
+    #     chain_hash([0,      0,  3,      2,  0,  0,  0,  0,  0,  0]),
+    #     chain_hash([0,      0,  4,      5,  0,  0,  0,  0,  0,  0]),
+    # ])
 
     # expect failure if meta is not 0, as 0 represents "store" and only stored messages should be found in the snapshot
 

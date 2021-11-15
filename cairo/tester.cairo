@@ -57,7 +57,7 @@ func hash_request_tree_t{range_check_ptr, pedersen_ptr : HashBuiltin*}(
         meta_3, requestLinter_3, user_3, blockNumber_3, message1_3, message2_3, message3_3, message4_3, signature_r_3, signature_s_3,
         meta_4, requestLinter_4, user_4, blockNumber_4, message1_4, message2_4, message3_4, message4_4, signature_r_4, signature_s_4,
         meta_5, requestLinter_5, user_5, blockNumber_5, message1_5, message2_5, message3_5, message4_5, signature_r_5, signature_s_5,
-    ) -> (hash):
+    ) -> (root_hash):
     let (rq) = alloc()
     [rq] = meta_1
     [rq + 1] = requestLinter_1

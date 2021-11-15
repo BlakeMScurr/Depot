@@ -8,7 +8,9 @@ from merkle_tree import Request
 # It also proves that all messages in the snapshot are stored in order.
 
 func hash_request_tree{range_check_ptr, pedersen_ptr : HashBuiltin*}(blockNumber: felt, request_len: felt, request: Request*) -> (root_hash: felt):
-    # all_ordered(request_len, request)
+    alloc_locals
+    all_ordered(request_len, request)
+    local range_check_ptr = range_check_ptr # Store range_check_ptr in a local variable to make it accessible after the call to all_ordered()
     before_block(blockNumber, request_len, request)
 
     return (1)
@@ -20,20 +22,26 @@ end
 
 # Asserts that all the requests in the store are ordered
 func all_ordered{range_check_ptr}(request_len : felt, request : Request*):
+    alloc_locals
+    local range_check_ptr = range_check_ptr
     if request_len == 1:
         return ()
     end
 
     let next_request = request + Request.SIZE
-    request_le(request, next_request)
+    request_le(request, next_request) 
+    local range_check_ptr = range_check_ptr # Store range_check_ptr in a local variable to make it accessible after the call to request_le()
     return all_ordered(request_len-1, next_request)
 end
 
 # Checks a is less than or equal to b. Ordered by requestLinter, then user, then blockNumber, and finally numerically by message (where felts are interpretted as non negative integers)
+# Solves revoked reference as per https://cairo-lang.org/docs/how_cairo_works/builtins.html#revoked-implicit-arguments @guthl I have no idea how revoked references work or why lol
 func request_le{range_check_ptr}(a: Request*, b: Request*):
     assert_nn_le(a.requestLinter, b.requestLinter)
+
     if a.requestLinter == b.requestLinter:
         assert_nn_le(a.user, b.user)
+        tempvar range_check_ptr = range_check_ptr
         if a.user == b.user:
             assert_nn_le(a.blockNumber, b.blockNumber)
             if a.blockNumber == b.blockNumber:
@@ -44,11 +52,24 @@ func request_le{range_check_ptr}(a: Request*, b: Request*):
                         assert_nn_le(a.message3, b.message3)
                         if a.message3 == b.message3:
                             assert_nn_le(a.message4 + 1, b.message4)
+                        else:
+                            tempvar range_check_ptr = range_check_ptr
                         end
+                    else:
+                        tempvar range_check_ptr = range_check_ptr
                     end
+                else:
+                    tempvar range_check_ptr = range_check_ptr
                 end
+            else:
+                tempvar range_check_ptr = range_check_ptr
             end
+        else:
+            tempvar range_check_ptr = range_check_ptr
         end
+    else:
+        tempvar range_check_ptr = range_check_ptr
     end
+
     return ()
 end
