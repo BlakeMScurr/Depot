@@ -80,8 +80,10 @@ func val_of_hashed_requests{pedersen_ptr : HashBuiltin*}(
     [rq + 18] = signature_r_2
     [rq + 19] = signature_s_2
 
-    let (res) = hash_requests(2, cast(rq, Request*))
-    return ([res - index])
+    let (res : felt*) = alloc()
+
+    hash_requests(2, cast(rq, Request*), res)
+    return ([res + index])
 end
 
 # pass in testing data
