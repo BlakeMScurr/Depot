@@ -13,6 +13,9 @@ func hash_request_tree{range_check_ptr, pedersen_ptr : HashBuiltin*}(blockNumber
     local range_check_ptr = range_check_ptr # Store range_check_ptr in a local variable to make it accessible after the call to all_ordered()
     before_block(blockNumber, request_len, request)
 
+    
+    # TODO: hash all
+    # TODO: merkle tree
     return (1)
 end
 

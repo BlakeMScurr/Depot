@@ -89,8 +89,8 @@ async def test_hash_single_request():
         pedersen_hash(0,0),0),0),0),0),0),0),0),0)
     assert zeroHash == chain_hash([0,0,0,0,0,0,0,0,0,0])
 
-    inchash = (await contract.hash_request_t(0,1,2,3,4,5,6,7,8,9).invoke()).result.hash
-    assert inchash == pedersen_hash(
+    incHash = (await contract.hash_request_t(0,1,2,3,4,5,6,7,8,9).invoke()).result.hash
+    assert incHash == pedersen_hash(
         pedersen_hash(
         pedersen_hash(
         pedersen_hash(
@@ -99,7 +99,28 @@ async def test_hash_single_request():
         pedersen_hash(
         pedersen_hash(
         pedersen_hash(0,1),2),3),4),5),6),7),8),9)
-    assert inchash == chain_hash([0,1,2,3,4,5,6,7,8,9])
+    assert incHash == chain_hash([0,1,2,3,4,5,6,7,8,9])
+
+@pytest.mark.asyncio
+async def test_hash_requests():
+    starknet = await Starknet.empty()
+    contract = await starknet.deploy(
+        source=CONTRACT_FILE,
+    )
+
+    zeroHash = (await contract.val_of_hashed_requests(
+        0,0,0,0,0,0,0,0,0,0,
+        0,1,2,3,4,5,6,7,8,9,
+        0,
+    ).invoke()).result.hash
+    assert zeroHash == chain_hash([0,0,0,0,0,0,0,0,0,0])
+
+    incHash = (await contract.val_of_hashed_requests(
+        0,0,0,0,0,0,0,0,0,0,
+        0,1,2,3,4,5,6,7,8,9,
+        1,
+    ).invoke()).result.hash
+    assert incHash == chain_hash([0,1,2,3,4,5,6,7,8,9])
 
 @pytest.mark.asyncio
 async def test_hash_request_tree():
@@ -109,23 +130,23 @@ async def test_hash_request_tree():
     )
 
     # expect basic request trees to hash as normally
-    # root_hash = (await contract.hash_request_tree_t(
-    #     5,
-    #     # meta  rql user    bn  1   2   3   4   r   s
-    #     0,      0,  1,      1,  0,  0,  0,  0,  0,  0,
-    #     0,      0,  1,      1,  1,  0,  0,  0,  0,  0,
-    #     0,      0,  1,      2,  0,  0,  0,  0,  0,  0,
-    #     0,      0,  3,      2,  0,  0,  0,  0,  0,  0,
-    #     0,      0,  4,      5,  0,  0,  0,  0,  0,  0,
-    # ).invoke()).result.root_hash
+    root_hash = (await contract.hash_request_tree_t(
+        5,
+        # meta  rql user    bn  1   2   3   4   r   s
+        0,      0,  1,      1,  0,  0,  0,  0,  0,  0,
+        0,      0,  1,      1,  1,  0,  0,  0,  0,  0,
+        0,      0,  1,      2,  0,  0,  0,  0,  0,  0,
+        0,      0,  3,      2,  0,  0,  0,  0,  0,  0,
+        0,      0,  4,      5,  0,  0,  0,  0,  0,  0,
+    ).invoke()).result.root_hash
 
-    # assert root_hash == merkle_tree([
-    #     chain_hash([0,      0,  1,      1,  0,  0,  0,  0,  0,  0]),
-    #     chain_hash([0,      0,  1,      1,  1,  0,  0,  0,  0,  0]),
-    #     chain_hash([0,      0,  1,      2,  0,  0,  0,  0,  0,  0]),
-    #     chain_hash([0,      0,  3,      2,  0,  0,  0,  0,  0,  0]),
-    #     chain_hash([0,      0,  4,      5,  0,  0,  0,  0,  0,  0]),
-    # ])
+    assert root_hash == merkle_tree([
+        chain_hash([0,      0,  1,      1,  0,  0,  0,  0,  0,  0]),
+        chain_hash([0,      0,  1,      1,  1,  0,  0,  0,  0,  0]),
+        chain_hash([0,      0,  1,      2,  0,  0,  0,  0,  0,  0]),
+        chain_hash([0,      0,  3,      2,  0,  0,  0,  0,  0,  0]),
+        chain_hash([0,      0,  4,      5,  0,  0,  0,  0,  0,  0]),
+    ])
 
     # expect failure if meta is not 0, as 0 represents "store" and only stored messages should be found in the snapshot
 

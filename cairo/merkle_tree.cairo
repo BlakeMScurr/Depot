@@ -4,6 +4,7 @@
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.hash import hash2
+from starkware.cairo.common.alloc import alloc
 
 func merkle_tree{pedersen_ptr : HashBuiltin*}(elems_len: felt, elems: felt*) -> (root_hash):
     let (next_len) = merkle_layer(elems_len, elems, 0)
@@ -47,6 +48,20 @@ func merkle_layer{pedersen_ptr : HashBuiltin*}(elems_len: felt, elems: felt*, ha
     # recurse along the list
     let (next_len) = merkle_layer(elems_len=elems_len, elems=elems, hash_index=hash_index+1)
     return (next_len + 1)
+end
+
+func hash_requests{pedersen_ptr : HashBuiltin*}(requests_len: felt, requests: Request*) -> (res: felt*):
+    alloc_locals
+
+    if requests_len == 0:
+        let (res : felt*) = alloc()
+        return (res)
+    end
+
+    let (last_res) = hash_requests(requests_len=requests_len-1, requests=requests+Request.SIZE)
+    let (h) = hash_request(requests)
+    [last_res + 1] = h
+    return (last_res + 1)
 end
 
 # Returns a hash committing to the request's state using the
