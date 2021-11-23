@@ -1,7 +1,7 @@
 %lang starknet
 
 from merkle_tree import merkle_layer, merkle_tree, hash_request, Request, hash_requests
-from snapshot import hash_request_tree
+from snapshot import hash_request_tree, request_le
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.alloc import alloc
 
@@ -44,6 +44,42 @@ func hash_request_t{pedersen_ptr : HashBuiltin*}(meta, requestLinter, user, bloc
     let (res) = hash_request(cast(rq, Request*))
     return (res)
 end
+
+@external
+func request_le_t{range_check_ptr, pedersen_ptr : HashBuiltin*}(
+    meta_1, requestLinter_1, user_1, blockNumber_1, message1_1, message2_1, message3_1, message4_1, signature_r_1, signature_s_1,
+    meta_2, requestLinter_2, user_2, blockNumber_2, message1_2, message2_2, message3_2, message4_2, signature_r_2, signature_s_2,
+    ):
+
+    let (rq1) = alloc()
+    let (rq2) = alloc()
+
+    [rq1] = meta_1
+    [rq1 + 1] = requestLinter_1
+    [rq1 + 2] = user_1
+    [rq1 + 3] = blockNumber_1
+    [rq1 + 4] = message1_1
+    [rq1 + 5] = message2_1
+    [rq1 + 6] = message3_1
+    [rq1 + 7] = message4_1
+    [rq1 + 8] = signature_r_1
+    [rq1 + 9] = signature_s_1
+
+    [rq2] = meta_2
+    [rq2 + 1] = requestLinter_2
+    [rq2 + 2] = user_2
+    [rq2 + 3] = blockNumber_2
+    [rq2 + 4] = message1_2
+    [rq2 + 5] = message2_2
+    [rq2 + 6] = message3_2
+    [rq2 + 7] = message4_2
+    [rq2 + 8] = signature_r_2
+    [rq2 + 9] = signature_s_2
+
+    request_le{range_check_ptr=range_check_ptr}(cast(rq1, Request*), cast(rq2, Request*))
+    return ()
+end
+
 
 # exposes the values of merkle layer
 # TODO: return the whole lot, though (@guthl) apparently we can't return a felt*
