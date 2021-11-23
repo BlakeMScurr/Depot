@@ -3,7 +3,6 @@ from starkware.cairo.common.math import assert_nn_le
 from merkle_tree import Request, hash_requests, merkle_tree
 from starkware.cairo.common.alloc import alloc
 
-
 # This program takes a snapshot of a store, and proves that the store is a superset of a previous snapshot.
 # It also proves that all messages in the snapshot are stored in order.
 
@@ -13,7 +12,6 @@ func hash_request_tree{range_check_ptr, pedersen_ptr : HashBuiltin*}(blockNumber
     all_valid(request_len, request)
     local range_check_ptr = range_check_ptr # Store range_check_ptr in a local variable to make it accessible after the call to all_valid()
     before_block(blockNumber, request_len, request)
-
     
     # hash requests into a merkle tree
     let (hashes : felt*) = alloc()
@@ -23,6 +21,14 @@ func hash_request_tree{range_check_ptr, pedersen_ptr : HashBuiltin*}(blockNumber
 end
 
 func before_block{range_check_ptr}(blockNumber: felt, request_len: felt, request: Request*):
+    alloc_locals
+    if request_len == 0:
+        return ()
+    end
+
+    assert_nn_le(request.blockNumber, blockNumber)
+    local range_check_ptr = range_check_ptr
+    before_block(blockNumber, request_len - 1, request + Request.SIZE)
     return ()
 end
 

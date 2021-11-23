@@ -154,35 +154,38 @@ async def test_hash_request_tree():
     # expect failure if meta is not 0, as 0 represents "store" and only stored messages should be found in the snapshot
     with pytest.raises(Exception) as e_info:
         d = requestData()
-        d[0] = 1
+        d[0] = 1 # set meta to 1
         _ = (await contract.hash_request_tree_t(
             5, *d,
         ).invoke())
     assert e_info.value.message.find("assert request.meta = 0 # 0 represents a store request") != -1
 
     # expect failure for out of order requests
-    # ensure we fail if we are out of order by requestLinter, user, blockNumber, message1, message2, message3, or message4
-
-
-    # with pytest.raises(Exception) as e_info:
-    #     _ = (await contract.hash_request_tree_t(
-    #         5,
-    #         # meta  rql user    bn  1   2   3   4   r   s
-    #         0,      0,  1,      1,  0,  0,  0,  0,  0,  0,
-    #         0,      0,  1,      1,  1,  0,  0,  0,  0,  0,
-    #         0,      0,  1,      2,  0,  0,  0,  0,  0,  0,
-    #         0,      0,  3,      2,  0,  0,  0,  0,  0,  0,
-    #         0,      0,  4,      5,  0,  0,  0,  0,  0,  0,
-    #     ).invoke())
-    # print(dir(e_info.value))
-    # assert e_info.value.message.find("assert request.meta = 0 # 0 represents a store request") != -1
-
+    with pytest.raises(Exception) as e_info:
+        _ = (await contract.hash_request_tree_t(
+            4, *requestData(),
+        ).invoke())
+    assert e_info.value.message.find("assert_nn_le(request.blockNumber, blockNumber)") != -1
 
     # expect failure for two totally identical messages being included
+    with pytest.raises(Exception) as e_info:
+        d = requestData()
+        d[14] = 0 # make two adjacent requests equal, therefore not strictly ordered
+        _ = (await contract.hash_request_tree_t(
+            5, *d,
+        ).invoke())
+    assert e_info.value.message.find("assert_nn_le(a.message4 + 1, b.message4)") != -1
     
     # expect failure when any message is stored after the specified block (i.e., ensure all messages are before a certain block)
+    with pytest.raises(Exception) as e_info:
+        d = requestData()
+        d[0] = 1 # set meta to 1
+        _ = (await contract.hash_request_tree_t(
+            5, *d,
+        ).invoke())
+    assert e_info.value.message.find("assert request.meta = 0 # 0 represents a store request") != -1
 
-async def test_le(index, value, contract, errorMessage):
+async def le_test_case(index, value, contract, errorMessage):
     d = [
         # meta  rql user    bn  1   2   3   4   r   s
         0,      0,  0,      0,  0,  0,  0,  0,  0,  0,
@@ -206,12 +209,12 @@ async def test_request_le():
         0,0,0,0,0,0,0,1,0,0,
     ).invoke()
 
-    await test_le(0, 0, contract, "assert_nn_le(a.message4 + 1, b.message4)")
-    await test_le(1, 1, contract, "assert_nn_le(a.requestLinter, b.requestLinter)")
-    await test_le(2, 1, contract, "assert_nn_le(a.user, b.user)")
-    await test_le(3, 1, contract, "assert_nn_le(a.blockNumber, b.blockNumber)")
-    await test_le(4, 1, contract, "assert_nn_le(a.message1, b.message1)")
-    await test_le(5, 1, contract, "assert_nn_le(a.message2, b.message2)")
-    await test_le(6, 1, contract, "assert_nn_le(a.message3, b.message3)")
-    await test_le(7, 1, contract, "assert_nn_le(a.message4 + 1, b.message4)")
+    await le_test_case(0, 0, contract, "assert_nn_le(a.message4 + 1, b.message4)")
+    await le_test_case(1, 1, contract, "assert_nn_le(a.requestLinter, b.requestLinter)")
+    await le_test_case(2, 1, contract, "assert_nn_le(a.user, b.user)")
+    await le_test_case(3, 1, contract, "assert_nn_le(a.blockNumber, b.blockNumber)")
+    await le_test_case(4, 1, contract, "assert_nn_le(a.message1, b.message1)")
+    await le_test_case(5, 1, contract, "assert_nn_le(a.message2, b.message2)")
+    await le_test_case(6, 1, contract, "assert_nn_le(a.message3, b.message3)")
+    await le_test_case(7, 1, contract, "assert_nn_le(a.message4 + 1, b.message4)")
 
