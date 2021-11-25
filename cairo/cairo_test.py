@@ -47,28 +47,33 @@ async def test_merkle_tree():
         source=CONTRACT_FILE,
     )
 
-    # TODO: handle the trivial case of an empty tree - currently panics
-    assert (await contract.merkle_tree_t([]).invoke()).result == (0,)
-    assert (await contract.merkle_tree_t([1]).invoke()).result == (1,)
-    assert (await contract.merkle_tree_t([1,2]).invoke()).result == (pedersen_hash(1,2),)
+    # TODO: handle the trivial case of an empty tree
+    assert (await contract.merkle_tree_t(0, [1]).invoke()).result == (1,)
+    assert (await contract.merkle_tree_t(1, [1,2]).invoke()).result == (pedersen_hash(1,2),)
     assert merkle_tree([1,2]) == pedersen_hash(1,2)
 
-    merkleTree1to4 = (await contract.merkle_tree_t([1,2,3,4]).invoke()).result.root_hash
+    merkleTree1to4 = (await contract.merkle_tree_t(2, [1,2,3,4]).invoke()).result.root_hash
     assert merkleTree1to4  == pedersen_hash(
         pedersen_hash(1,2),
         pedersen_hash(3,4)
     )
     assert merkleTree1to4 == merkle_tree([1,2,3,4])
 
-    merkleTree1to5 = (await contract.merkle_tree_t([1,2,3,4,5]).invoke()).result.root_hash
+    merkleTree1to5 = (await contract.merkle_tree_t(3, [1,2,3,4,5]).invoke()).result.root_hash
+    mv = 2 ** 250
+    max_hash = chain_hash([mv, mv, mv, mv, mv, mv, mv, mv, mv, mv])
     assert merkleTree1to5 == pedersen_hash(
         pedersen_hash(
             pedersen_hash(1,2),
             pedersen_hash(3,4)
         ),
-        5
+        pedersen_hash(
+            pedersen_hash(5, max_hash),
+            pedersen_hash(max_hash, max_hash),
+        )
     )
-    assert merkleTree1to5 == merkle_tree([1,2,3,4,5])
+
+    assert merkleTree1to5 == merkle_tree([1,2,3,4,5, max_hash, max_hash, max_hash])
 
 @pytest.mark.asyncio
 async def test_hash_single_request():
@@ -140,15 +145,20 @@ async def test_hash_request_tree():
 
     # expect basic request trees to hash as normally
     root_hash = (await contract.hash_request_tree_t(
-        5, *requestData()
+        3, 5, *requestData()
     ).invoke()).result.root_hash
 
+    m = 2 ** 250
     assert root_hash == merkle_tree([
         chain_hash([0,      0,  1,      1,  0,  0,  0,  0,  0,  0]),
         chain_hash([0,      0,  1,      1,  1,  0,  0,  0,  0,  0]),
         chain_hash([0,      0,  1,      2,  0,  0,  0,  0,  0,  0]),
         chain_hash([0,      0,  3,      2,  0,  0,  0,  0,  0,  0]),
         chain_hash([0,      0,  4,      5,  0,  0,  0,  0,  0,  0]),
+
+        chain_hash([m,      m,  m,      m,  m,  m,  m,  m,  m,  m]),
+        chain_hash([m,      m,  m,      m,  m,  m,  m,  m,  m,  m]),
+        chain_hash([m,      m,  m,      m,  m,  m,  m,  m,  m,  m]),
     ])
 
     # expect failure if meta is not 0, as 0 represents "store" and only stored messages should be found in the snapshot
@@ -156,14 +166,14 @@ async def test_hash_request_tree():
         d = requestData()
         d[0] = 1 # set meta to 1
         _ = (await contract.hash_request_tree_t(
-            5, *d,
+            3, 5, *d,
         ).invoke())
     assert e_info.value.message.find("assert request.meta = 0 # 0 represents a store request") != -1
 
     # expect failure for out of order requests
     with pytest.raises(Exception) as e_info:
         _ = (await contract.hash_request_tree_t(
-            4, *requestData(),
+            3, 4, *requestData(),
         ).invoke())
     assert e_info.value.message.find("assert_nn_le(request.blockNumber, blockNumber)") != -1
 
@@ -172,7 +182,7 @@ async def test_hash_request_tree():
         d = requestData()
         d[14] = 0 # make two adjacent requests equal, therefore not strictly ordered
         _ = (await contract.hash_request_tree_t(
-            5, *d,
+            3, 5, *d,
         ).invoke())
     assert e_info.value.message.find("assert_nn_le(a.message4 + 1, b.message4)") != -1
     
@@ -181,7 +191,7 @@ async def test_hash_request_tree():
         d = requestData()
         d[0] = 1 # set meta to 1
         _ = (await contract.hash_request_tree_t(
-            5, *d,
+            3, 5, *d,
         ).invoke())
     assert e_info.value.message.find("assert request.meta = 0 # 0 represents a store request") != -1
 

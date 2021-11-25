@@ -4,8 +4,41 @@
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.hash import hash2
+from starkware.cairo.common.math import assert_nn_le
+from starkware.cairo.common.alloc import alloc
+from starkware.cairo.common.registers import get_fp_and_pc
 
-func merkle_tree{pedersen_ptr : HashBuiltin*}(elems_len: felt, elems: felt*) -> (root_hash):
+func merkle_tree{range_check_ptr, pedersen_ptr : HashBuiltin*}(depth: felt, filler: felt, elems_len: felt, elems: felt*) -> (root_hash):
+    alloc_locals
+    let (full_length) = two_pow(depth)
+    assert_nn_le(elems_len, full_length)
+    fill_elems(full_length - elems_len, elems + elems_len, filler)
+    let (root_hash) = merkle_tree_rec{pedersen_ptr=pedersen_ptr}(full_length, elems)
+    return (root_hash)
+end
+
+# Double asterix exponentiation *should* work, right? Seems not to allow variables as exponents.
+# TODO: fix
+# @guthl, what's up no exponentiation of variables?
+func two_pow(exp) -> (result):
+    if exp == 0:
+        return (1)
+    end
+    let (two_pow_n_minus_1) = two_pow(exp -1)
+    return (2 * two_pow_n_minus_1)
+end
+
+func fill_elems(to_fill_len: felt, to_fill: felt*, filler: felt):
+    if to_fill_len == 0:
+        return ()
+    end
+
+    to_fill[0] = filler
+    fill_elems(to_fill_len - 1, to_fill + 1, filler)
+    return ()
+end
+
+func merkle_tree_rec{pedersen_ptr : HashBuiltin*}(elems_len: felt, elems: felt*) -> (root_hash):
     let (next_len) = merkle_layer(elems_len, elems, 0)
     if next_len == 0:
         return (0) # we define 0 as the hash of an empty tree
@@ -14,7 +47,7 @@ func merkle_tree{pedersen_ptr : HashBuiltin*}(elems_len: felt, elems: felt*) -> 
         return ([elems + elems_len + 1])
     end
 
-    let (res) = merkle_tree(next_len, elems + elems_len + 1)
+    let (res) = merkle_tree_rec{pedersen_ptr=pedersen_ptr}(next_len, elems + elems_len + 1)
     return (res)
 end
 
@@ -89,6 +122,15 @@ func hash_request{pedersen_ptr : HashBuiltin*}(r : Request*) -> (res : felt):
     let (res) = hash2{hash_ptr=pedersen_ptr}(
         res, r.signature_s)
     return (res=res)
+end
+
+func max_request_hash{pedersen_ptr : HashBuiltin*}() -> (mrh: felt):
+    alloc_locals
+    let (__fp__, _) = get_fp_and_pc()
+    const m = 2 ** 250
+    local rq : Request = Request(meta=m,requestLinter=m,user=m,blockNumber=m,message1=m,message2=m,message3=m,message4=m,signature_r=m,signature_s=m)
+    let (mrh) = hash_request(cast(&rq, Request*))
+    return (mrh)
 end
 
 # A signed request from a user to be stored in the silo.

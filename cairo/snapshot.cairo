@@ -1,12 +1,32 @@
 from starkware.cairo.common.cairo_builtins import (HashBuiltin, SignatureBuiltin)
 from starkware.cairo.common.math import assert_nn_le
-from merkle_tree import Request, hash_requests, merkle_tree
+from starkware.cairo.common.math_cmp import is_le
+from merkle_tree import Request, hash_requests, merkle_tree, max_request_hash
 from starkware.cairo.common.alloc import alloc
 
 # This program takes a snapshot of a store, and proves that the store is a superset of a previous snapshot.
 # It also proves that all messages in the snapshot are stored in order.
 
-func hash_request_tree{range_check_ptr, pedersen_ptr : HashBuiltin*}(blockNumber: felt, request_len: felt, request: Request*) -> (root_hash: felt):
+func snapshot_transition{range_check_ptr, pedersen_ptr : HashBuiltin*}(earlierBlock: felt, laterBlock: felt, request_len: felt, request: Request*):
+end
+
+# Take all requests before or at a certain block number and place them at the young_requests pointer
+func collect_requests{range_check_ptr}(block: felt, all_requests_len: felt, all_requests: Request*, young_requests: Request*) -> (young_requests_len: felt) :
+    if all_requests_len == 0:
+        return (0)
+    end
+
+    if is_le(all_requests.block_number, block) == 1:
+        young_requests = all_requests[0]
+        let (res) = collect_requests(block, all_requests_len - 1, all_requests + Request.SIZE, young_requests + Request.SIZE)
+        return (res + 1)
+    else:
+        let (res) = collect_requests(block, all_requests_len - 1, all_requests + Request.SIZE, young_requests)
+        return (res)
+    end
+end
+
+func hash_request_tree{range_check_ptr, pedersen_ptr : HashBuiltin*}(depth: felt, blockNumber: felt, request_len: felt, request: Request*) -> (root_hash: felt):
     # assert that all requests are in order
     alloc_locals
     all_valid(request_len, request)
@@ -16,7 +36,9 @@ func hash_request_tree{range_check_ptr, pedersen_ptr : HashBuiltin*}(blockNumber
     # hash requests into a merkle tree
     let (hashes : felt*) = alloc()
     hash_requests(request_len, request, hashes)
-    let (res) = merkle_tree(request_len, hashes)
+
+    let (mrh) = max_request_hash{pedersen_ptr=pedersen_ptr}()
+    let (res) = merkle_tree(depth, mrh, request_len, hashes)
     return (res)
 end
 
