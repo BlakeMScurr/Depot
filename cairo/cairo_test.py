@@ -75,6 +75,18 @@ async def test_merkle_tree():
 
     assert merkleTree1to5 == merkle_tree([1,2,3,4,5, max_hash, max_hash, max_hash])
 
+    with pytest.raises(Exception) as e_info:
+        await contract.merkle_tree_t(1, [1,2,3,4]).invoke()
+    assert e_info.value.message.find("assert_nn_le(elems_len, full_length)") != -1
+
+    with pytest.raises(Exception) as e_info:
+        await contract.merkle_tree_t(4, [1,2,3,4]).invoke()
+    assert e_info.value.message.find("assert_nn_le(full_length, elems_len*2)") != -1
+
+    with pytest.raises(Exception) as e_info:
+        await contract.merkle_tree_t(5, [1,2,3,4,5]).invoke()
+    assert e_info.value.message.find("assert_nn_le(full_length, elems_len*2)") != -1
+
 @pytest.mark.asyncio
 async def test_hash_single_request():
     starknet = await Starknet.empty()

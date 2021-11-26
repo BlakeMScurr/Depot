@@ -11,6 +11,7 @@ from starkware.cairo.common.registers import get_fp_and_pc
 func merkle_tree{range_check_ptr, pedersen_ptr : HashBuiltin*}(depth: felt, filler: felt, elems_len: felt, elems: felt*) -> (root_hash):
     alloc_locals
     let (full_length) = two_pow(depth)
+    assert_nn_le(full_length, elems_len*2)
     assert_nn_le(elems_len, full_length)
     fill_elems(full_length - elems_len, elems + elems_len, filler)
     let (root_hash) = merkle_tree_rec{pedersen_ptr=pedersen_ptr}(full_length, elems)
