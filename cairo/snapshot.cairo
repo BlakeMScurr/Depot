@@ -1,7 +1,8 @@
 from starkware.cairo.common.cairo_builtins import (HashBuiltin, SignatureBuiltin)
 from starkware.cairo.common.math import assert_nn_le
 from starkware.cairo.common.math_cmp import is_le
-from merkle_tree import Request, hash_requests, merkle_tree, max_request_hash
+from merkle_tree import hash_requests, merkle_tree
+from request import Request, zero_request, max_request, hash_request, request_equal
 from starkware.cairo.common.alloc import alloc
 
 # This program takes a snapshot of a store, and proves that the store is a superset of a previous snapshot.
@@ -27,8 +28,17 @@ func collect_requests{range_check_ptr}(block: felt, all_requests_len: felt, all_
 end
 
 func hash_request_tree{range_check_ptr, pedersen_ptr : HashBuiltin*}(depth: felt, blockNumber: felt, request_len: felt, request: Request*) -> (root_hash: felt):
-    # assert that all requests are in order
     alloc_locals
+    # assert that the 0 and MAX requests bookend the list
+    let (zeror) = zero_request()
+    let (zeq) = request_equal(zeror, request) 
+    assert zeq = 1
+
+    let (mr) = max_request()
+    let (meq) = request_equal(mr, request + (request_len * Request.SIZE))
+    assert meq = 1
+    
+    # assert that all requests are in order
     all_valid(request_len, request)
     local range_check_ptr = range_check_ptr # Store range_check_ptr in a local variable to make it accessible after the call to all_valid()
     before_block(blockNumber, request_len, request)
@@ -37,7 +47,7 @@ func hash_request_tree{range_check_ptr, pedersen_ptr : HashBuiltin*}(depth: felt
     let (hashes : felt*) = alloc()
     hash_requests(request_len, request, hashes)
 
-    let (mrh) = max_request_hash{pedersen_ptr=pedersen_ptr}()
+    let (mrh) = hash_request{pedersen_ptr=pedersen_ptr}(mr)
     let (res) = merkle_tree(depth, mrh, request_len, hashes)
     return (res)
 end

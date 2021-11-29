@@ -1,6 +1,7 @@
 %lang starknet
 
-from merkle_tree import merkle_layer, merkle_tree, hash_request, Request, hash_requests, max_request_hash
+from request import max_request
+from merkle_tree import merkle_layer, merkle_tree, hash_request, Request, hash_requests
 from snapshot import hash_request_tree, request_le
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.alloc import alloc
@@ -16,7 +17,8 @@ end
 # expose the internal merkle_tree function for testing
 @external
 func merkle_tree_t{range_check_ptr, pedersen_ptr : HashBuiltin*}(depth: felt, elems_len: felt, elems: felt*) -> (root_hash):
-    let (mh) = max_request_hash()
+    let (mr) = max_request()
+    let (mh) = hash_request(mr)
     let (res) = merkle_tree(depth, mh, elems_len, elems)
     return (res)
 end
