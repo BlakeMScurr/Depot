@@ -146,6 +146,7 @@ async def test_hash_request_tree():
         source=CONTRACT_FILE,
     )
 
+    m = 2 ** 250
     requestData = lambda : [
         # meta  rql user    bn  1   2   3   4   r   s
         0,      0,  1,      1,  0,  0,  0,  0,  0,  0,
@@ -160,15 +161,15 @@ async def test_hash_request_tree():
         3, 5, *requestData()
     ).invoke()).result.root_hash
 
-    m = 2 ** 250
     assert root_hash == merkle_tree([
+        chain_hash([0,      0,  0,      0,  0,  0,  0,  0,  0,  0]),
+    
         chain_hash([0,      0,  1,      1,  0,  0,  0,  0,  0,  0]),
         chain_hash([0,      0,  1,      1,  1,  0,  0,  0,  0,  0]),
         chain_hash([0,      0,  1,      2,  0,  0,  0,  0,  0,  0]),
         chain_hash([0,      0,  3,      2,  0,  0,  0,  0,  0,  0]),
         chain_hash([0,      0,  4,      5,  0,  0,  0,  0,  0,  0]),
 
-        chain_hash([m,      m,  m,      m,  m,  m,  m,  m,  m,  m]),
         chain_hash([m,      m,  m,      m,  m,  m,  m,  m,  m,  m]),
         chain_hash([m,      m,  m,      m,  m,  m,  m,  m,  m,  m]),
     ])
