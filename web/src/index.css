@@ -21,3 +21,15 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
 }
+
+* {
+  font-family: "Marko One", serif;
+}
+
+h1 {
+  color: #247BA0;
+}
+
+hr {
+  border: 1px solid #CBD4C2;
+}

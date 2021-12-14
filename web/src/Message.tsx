@@ -11,10 +11,10 @@ const Message: Component = (props) => {
         <For each={parts}>{(part) =>
             <Switch fallback={<span class={styles.primary}>{part.text}</span>}>
                 <Match when={part.type == "link"}>
-                    <a href={addHttp(part.text)}>{part.text}</a>
+                    <a class={styles.primary} href={addHttp(part.text)}>{part.text}</a>
                 </Match>
                 <Match when={part.type == "user"}>
-                    <a href={part.text}>{part.text}</a>
+                    <a class={styles.primary} href={part.text}>{part.text}</a>
                 </Match>
             </Switch>
         }</For>

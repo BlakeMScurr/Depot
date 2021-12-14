@@ -1,6 +1,18 @@
-.bg {
+.container {
   height: 100%;
   background-color: #FFFCFF;
+  display: flex;
+  flex-direction: column;
+  max-width: 600px;
+  margin: auto;
+}
+
+.container>h1 {
+  align-self: center;
+}
+
+.container>.button {
+  align-self: center;
 }
 
 .primary {
@@ -9,4 +21,33 @@
 
 .secondary {
   color: #CBD4C2;
+}
+
+.button {
+  background-color: #247BA0;
+  width: fit-content;
+  display: inline-block;
+  border-radius: 4px;
+}
+.button:hover {
+  background-color: #196F94;
+  cursor: pointer;
+}
+
+.buttonText {
+  color: #FFFCFF;
+  margin: 8px 20px;
+}
+
+a {
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+a.primary {
+  color: #B084CC;
 }

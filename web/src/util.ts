@@ -1,6 +1,6 @@
 // Credit to https://stackoverflow.com/a/6041965/7371580
 let linkMatcher = /((http|ftp|https):\/\/)?([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@^=%&\/~+#-])/
-let userMatcher = /@[a-zA-Z0-9]+/
+let userMatcher = /@[a-zA-Z0-9\.]+/
 
 export function splitByLink(message: string) {
     let parts = []
