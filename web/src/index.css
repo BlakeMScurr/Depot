@@ -11,6 +11,7 @@ body {
 
 html {
   height: 100%;
+  background-color: #FFFDFF;
 }
 
 #root {
@@ -32,4 +33,9 @@ h1 {
 
 hr {
   border: 1px solid #CBD4C2;
+  margin: 0;
+}
+
+p {
+  margin: 0;
 }

@@ -1,6 +1,5 @@
 .container {
   height: 100%;
-  background-color: #FFFCFF;
   display: flex;
   flex-direction: column;
   max-width: 600px;
@@ -35,7 +34,7 @@
 }
 
 .buttonText {
-  color: #FFFCFF;
+  color: #FFFDFF;
   margin: 8px 20px;
 }
 
@@ -48,6 +47,32 @@ a:hover {
   cursor: pointer;
 }
 
+.logo {
+  color: #247BA0;
+}
+
+.logo:hover {
+  text-decoration: none;
+  color: #196F94;
+}
+
 a.primary {
   color: #B084CC;
+}
+
+.messages {
+  padding-top: 20px;
+}
+
+.content {
+  overflow: auto;
+}
+
+.content>div {
+  padding: 15px 30px;
+}
+
+.content:hover {
+  cursor: pointer;
+  background-color: #F6F1F6;
 }
