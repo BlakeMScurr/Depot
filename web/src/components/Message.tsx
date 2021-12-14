@@ -1,7 +1,6 @@
 import { Component, For, Switch, Match } from "solid-js";
 
-import styles from "./App.module.css";
-import { splitByLink, addHttp } from "./util";
+import { splitByLink, addHttp } from "../util";
 
 const Message: Component = (props) => {
     
@@ -9,12 +8,12 @@ const Message: Component = (props) => {
 
     return (
         <For each={parts}>{(part) =>
-            <Switch fallback={<span class={styles.primary}>{part.text}</span>}>
+            <Switch fallback={<span class="primary">{part.text}</span>}>
                 <Match when={part.type == "link"}>
-                    <a class={styles.primary} href={addHttp(part.text)}>{part.text}</a>
+                    <a class="primary" href={addHttp(part.text)}>{part.text}</a>
                 </Match>
                 <Match when={part.type == "user"}>
-                    <a class={styles.primary} href={part.text}>{part.text}</a>
+                    <a class="primary" href={part.text}>{part.text}</a>
                 </Match>
             </Switch>
         }</For>

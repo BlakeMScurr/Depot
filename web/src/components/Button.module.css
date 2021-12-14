@@ -1,0 +1,17 @@
+.button {
+    background-color: var(--primary);
+    width: fit-content;
+    display: inline-block;
+    border-radius: 4px;
+}
+
+.button:hover {
+    background-color: var(--primary-hover);
+    cursor: pointer;
+}
+  
+.buttonText {
+    color: var(--background);
+    margin: 8px 20px;
+  }
+  

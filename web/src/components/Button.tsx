@@ -1,6 +1,6 @@
 import { Component, For, Switch, Match } from "solid-js";
 
-import styles from "./App.module.css";
+import styles from "./Button.module.css";
 
 const Message: Component = (props) => {
     

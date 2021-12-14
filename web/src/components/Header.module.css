@@ -1,0 +1,8 @@
+.logo {
+    color: var(--primary);
+}
+  
+.logo:hover {
+    text-decoration: none;
+    color: var(--primary-hover);
+}

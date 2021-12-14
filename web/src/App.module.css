@@ -10,54 +10,8 @@
   align-self: center;
 }
 
-.container>.button {
+.login {
   align-self: center;
-}
-
-.primary {
-  color:  #247BA0;
-}
-
-.secondary {
-  color: #CBD4C2;
-}
-
-.button {
-  background-color: #247BA0;
-  width: fit-content;
-  display: inline-block;
-  border-radius: 4px;
-}
-.button:hover {
-  background-color: #196F94;
-  cursor: pointer;
-}
-
-.buttonText {
-  color: #FFFDFF;
-  margin: 8px 20px;
-}
-
-a {
-  text-decoration: none;
-}
-
-a:hover {
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-.logo {
-  color: #247BA0;
-}
-
-.logo:hover {
-  text-decoration: none;
-  color: #196F94;
-}
-
-a.primary {
-  color: #B084CC;
 }
 
 .messages {
@@ -74,5 +28,5 @@ a.primary {
 
 .content:hover {
   cursor: pointer;
-  background-color: #F6F1F6;
+  background-color: var(--hover-color);
 }

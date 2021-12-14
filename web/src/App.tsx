@@ -1,9 +1,11 @@
 import type { Component } from "solid-js";
 import { For } from "solid-js";
 
-import User  from "./User"
-import Message  from "./Message"
-import Button from "./Button"
+import User  from "./components/User"
+import Message  from "./components/Message"
+import Button from "./components/Button"
+import Header from "./components/Header"
+import Footer from "./components/Footer"
 
 import styles from "./App.module.css";
 
@@ -28,8 +30,10 @@ const App: Component = () => {
 
   return (
     <div class={styles.container}>
-      <h1><a class={styles.logo} href="/">Snuggly</a></h1>
-      <Button content="Login with Ethereum"></Button>
+      <Header></Header>
+      <div class={styles.login}>
+        <Button content="Login with Ethereum"></Button>
+      </div>
       <div class={styles.messages}>
         <For each={messages}>{(message) =>
           <div onclick={() => { window.location.assign("/m/" + message.hash) }} class={styles.content}>
@@ -41,7 +45,7 @@ const App: Component = () => {
           </div>
         }</For>
       </div>
-      <a class={styles.primary} href="https://github.com/blakemscurr/snuggly">github</a>
+      <Footer></Footer>
     </div>
   );
 };
