@@ -2,7 +2,7 @@
 
 An Easement is a method to ensure cencorship free access to an offchain data store.
 
-It can be used for simple read/write applications like most social media or publishing. It can also be paired with a validium to assure users of data availability.
+It can be used for simple read/write applications like most social media or publishing. I also suspect it can be paired with a validium to assure users of data availability.
 
 # Properties
 
