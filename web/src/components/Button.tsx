@@ -1,11 +1,13 @@
-import { Component } from "solid-js";
+import { Component, createEffect, mergeProps } from "solid-js";
 
 import styles from "./Button.module.css";
 
 const Message: Component = (props) => {
+    props = mergeProps({active: true}, props)
+
     return (
-        <div class={styles.button}>
-            <p onclick={() => {props.clickSignal(true)}} class={styles.buttonText}>{props.content}</p>
+        <div class={ props.active() ? styles.button: styles.inactive } onclick={() => {props.clickSignal(true)}}>
+            <p class={styles.buttonText}>{props.content}</p>
         </div>
     );
 };

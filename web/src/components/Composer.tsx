@@ -1,18 +1,18 @@
-import { Component, createSignal } from "solid-js";
+import { Component, createEffect, createSignal } from "solid-js";
 import { splitByLink } from "../util";
 import Button from "./Button";
 import { default as styles } from "./Composer.module.css";
 
 const User: Component = () => {
-    // TODO: colour links as they're written
-    // Options include:
-    // - having a renderer div overlaid ontop of the input div (ends up being tricky to use the innerHTML or innerText of the input to produce the appropriate results)
-    // - updating the inner html and replacing the caret appropriately
+    let [poasted, post] = createSignal(false)
+    let [text, setText] = createSignal("")
 
     let input;
     let [renderer, setRenderer] = createSignal(null)
     // render links
     let oninput = () => {
+        setText(input.innerText)
+        post(false)
         let parent = document.createElement('div');
         input.childNodes.forEach((node) => {
             parent.appendChild(node.cloneNode(true))
@@ -29,6 +29,14 @@ const User: Component = () => {
         setRenderer(parent)
     }
 
+    createEffect(() => {
+        if (poasted()) {
+            setText("")
+            input.innerText = ""
+            setRenderer(document.createElement('div'))
+        }
+    })
+
     return (
         <div class={styles.container}>
             <div ref={input} oninput={oninput} class={styles.input} placeholder="gm" contenteditable="true"></div>
@@ -36,7 +44,7 @@ const User: Component = () => {
                 {renderer}
             </div>
             <div class={styles.button}>
-                <Button content="poast"></Button>
+                <Button active={() => {return text() !== ""}} clickSignal={post} content="poast"></Button>
             </div>
         </div>
     );

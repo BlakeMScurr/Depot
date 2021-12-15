@@ -9,6 +9,18 @@
     background-color: var(--primary-hover);
     cursor: pointer;
 }
+
+.inactive {
+    background-color: var(--secondary);
+    width: fit-content;
+    display: inline-block;
+    border-radius: 4px;
+}
+
+.inactive:hover {
+    pointer-events: none;
+    cursor: auto;
+}
   
 .buttonText {
     color: var(--background);
