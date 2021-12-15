@@ -1,27 +1,39 @@
-import type { Component } from "solid-js";
+import { Component, createSignal } from "solid-js";
 import { splitByLink } from "../util";
 
 import { default as styles } from "./Composer.module.css";
 
 const User: Component = () => {
-    let t;
+    // TODO: colour links as they're written
+    // Options include:
+    // - having a renderer div overlaid ontop of the input div (ends up being tricky to use the innerHTML or innerText of the input to produce the appropriate results)
+    // - updating the inner html and replacing the caret appropriately
 
+    let input;
+    let [renderer, setRenderer] = createSignal(null)
     let oninput = () => {
-        // Auto resize as per https://stackoverflow.com/a/48460773/7371580
-        t.style.height = "0px"
-        let sh = (t.scrollHeight - 20) + "px" // -20 removes the padding
-        t.height = sh
-        t.style.height = sh
+        let parent = document.createElement('div');
+        input.childNodes.forEach((node) => {
+            parent.appendChild(node.cloneNode(true))
+        })
 
-        // highlight links
-        _ = splitByLink(t.value).map((part) => {
-            return part.type === "text" ? part.text : `<mark>${part.text}</mark>`
-        }).join("")
+        let parts = splitByLink(parent.innerText)
+        parts.forEach((part) => {
+            if (part.type !== "text") {
+                parent.innerHTML = parent.innerHTML.replace(part.text, `<span>${part.text}</span>`)
+
+            }
+        })
+
+        setRenderer(parent)
     }
 
     return (
         <div class={styles.container}>
-            <textarea ref={t} oninput={oninput} class={styles.input} placeholder="gm" />
+            <div ref={input} oninput={oninput} class={styles.input} placeholder="gm" contenteditable="true"></div>
+            <div class={styles.renderer}>
+                {renderer}
+            </div>
         </div>
     );
 };

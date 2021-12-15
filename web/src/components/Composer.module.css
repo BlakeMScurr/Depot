@@ -1,19 +1,35 @@
 .input {
-    font-family: "Marko One", serif;
+    width: 100%;
     color: var(--primary);
     font-size: 1em;
     line-height: 1em;
     border: 2px solid var(--secondary);
     border-radius: 3px;
-
-    height: 1em;
     padding: 10px;
-    width: 100%;
+    width: 80%;
+    margin: auto;
+}
 
-    resize: none;
+.input[placeholder]:empty:before {
+    content: attr(placeholder);
+    color: var(--secondary); 
 }
 
 .container {
+    position: relative;
+}
+
+.renderer {
+    position: absolute;
+    top: 0px;
     width: 80%;
-    margin: auto;
+    margin: 0 0 0 10%;
+    color: rgba(256, 256, 256, 0);
+    padding: 12px 0 0 0; /* 2 for the border, 10 for the padding*/
+    line-height: 1em;
+    pointer-events: none;
+}
+
+span {
+    color: var(--link);
 }
