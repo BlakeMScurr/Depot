@@ -1,6 +1,6 @@
 import { Component, createSignal } from "solid-js";
 import { splitByLink } from "../util";
-
+import Button from "./Button";
 import { default as styles } from "./Composer.module.css";
 
 const User: Component = () => {
@@ -11,6 +11,7 @@ const User: Component = () => {
 
     let input;
     let [renderer, setRenderer] = createSignal(null)
+    // render links
     let oninput = () => {
         let parent = document.createElement('div');
         input.childNodes.forEach((node) => {
@@ -33,6 +34,9 @@ const User: Component = () => {
             <div ref={input} oninput={oninput} class={styles.input} placeholder="gm" contenteditable="true"></div>
             <div class={styles.renderer}>
                 {renderer}
+            </div>
+            <div class={styles.button}>
+                <Button content="poast"></Button>
             </div>
         </div>
     );

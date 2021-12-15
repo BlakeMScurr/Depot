@@ -2,7 +2,7 @@
     width: 100%;
     color: var(--primary);
     font-size: 1em;
-    line-height: 1em;
+    line-height: 1.5em;
     border: 2px solid var(--secondary);
     border-radius: 3px;
     padding: 10px;
@@ -26,10 +26,16 @@
     margin: 0 0 0 10%;
     color: rgba(256, 256, 256, 0);
     padding: 12px 0 0 0; /* 2 for the border, 10 for the padding*/
-    line-height: 1em;
+    line-height: 1.5em;
     pointer-events: none;
 }
 
 span {
     color: var(--link);
+}
+
+.button {
+    display: flex;
+    justify-content: flex-end;
+    margin: 10px 10% 0 0;
 }
