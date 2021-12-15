@@ -1,12 +1,11 @@
-import { Component, For, Switch, Match } from "solid-js";
+import { Component } from "solid-js";
 
 import styles from "./Button.module.css";
 
 const Message: Component = (props) => {
-    
     return (
         <div class={styles.button}>
-            <p class={styles.buttonText}>{props.content}</p>
+            <p onclick={() => {props.clickSignal(true)}} class={styles.buttonText}>{props.content}</p>
         </div>
     );
 };

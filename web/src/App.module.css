@@ -1,17 +1,12 @@
 .container {
   height: 100%;
-  display: flex;
-  flex-direction: column;
   max-width: 600px;
   margin: auto;
 }
 
-.container>h1 {
-  align-self: center;
-}
-
 .login {
-  align-self: center;
+  margin: auto;
+  width: fit-content;
 }
 
 .messages {
@@ -29,4 +24,8 @@
 .content:hover {
   cursor: pointer;
   background-color: var(--hover-color);
+}
+
+h1 {
+  text-align: center;
 }

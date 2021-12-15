@@ -1,5 +1,6 @@
 body {
   margin: 0;
+  /* TODO: use variables for fonts */
   font-family: "Marko One", serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

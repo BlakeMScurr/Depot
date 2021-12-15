@@ -1,11 +1,12 @@
-import type { Component } from "solid-js";
-import { For } from "solid-js";
+import { Component, createEffect, createSignal } from "solid-js";
+import { For, Show } from "solid-js";
 
 import User  from "./components/User"
 import Message  from "./components/Message"
 import Button from "./components/Button"
 import Header from "./components/Header"
 import Footer from "./components/Footer"
+import Composer from "./components/Composer"
 
 import styles from "./App.module.css";
 
@@ -28,12 +29,18 @@ const App: Component = () => {
     }
   ]
 
+  let [loggedIn, login] = createSignal(true)
+
   return (
     <div class={styles.container}>
       <Header></Header>
-      <div class={styles.login}>
-        <Button content="Login with Ethereum"></Button>
-      </div>
+      <Show when={loggedIn()} fallback={() => 
+        <div class={styles.login}>
+          <Button clickSignal={login} content="Login with Ethereum"></Button>
+        </div>
+      }>
+        <Composer></Composer>
+      </Show>
       <div class={styles.messages}>
         <For each={messages}>{(message) =>
           <div onclick={() => { window.location.assign("/m/" + message.hash) }} class={styles.content}>

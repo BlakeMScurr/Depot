@@ -1,9 +1,7 @@
 import { Component, For, Switch, Match } from "solid-js";
-
 import { splitByLink, addHttp } from "../util";
 
 const Message: Component = (props) => {
-    
     let parts = splitByLink(props.message)
 
     return (

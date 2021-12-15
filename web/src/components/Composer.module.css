@@ -1,0 +1,19 @@
+.input {
+    font-family: "Marko One", serif;
+    color: var(--primary);
+    font-size: 1em;
+    line-height: 1em;
+    border: 2px solid var(--secondary);
+    border-radius: 3px;
+
+    height: 1em;
+    padding: 10px;
+    width: 100%;
+
+    resize: none;
+}
+
+.container {
+    width: 80%;
+    margin: auto;
+}

@@ -2,7 +2,7 @@
 let linkMatcher = /((http|ftp|https):\/\/)?([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@^=%&\/~+#-])/
 let userMatcher = /@[a-zA-Z0-9\.]+/
 
-export function splitByLink(message: string) {
+export function splitByLink(message: string):Array<{text: string, type: string}> {
     let parts = []
 
     do {

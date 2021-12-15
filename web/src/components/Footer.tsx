@@ -1,11 +1,11 @@
 import type { Component } from "solid-js";
 
-import { default as compStyles } from "./Footer.module.css";
+import { default as styles } from "./Footer.module.css";
 
 const User: Component = () => {
     return (
-        <div class={compStyles.filler}>
-            <div class={compStyles.linkList}>
+        <div class={styles.filler}>
+            <div class={styles.linkList}>
                 <a class="primary" href="https://github.com/blakemscurr/snuggly">github</a>
             </div>
         </div>
