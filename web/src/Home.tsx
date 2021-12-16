@@ -1,4 +1,4 @@
-import { Component, createEffect, createSignal, untrack } from "solid-js";
+import { Component, createEffect, createSignal } from "solid-js";
 import { For, Show } from "solid-js";
 import { createStore } from "solid-js/store";
 
@@ -9,7 +9,7 @@ import Header from "./components/Header"
 import Footer from "./components/Footer"
 import Composer from "./components/Composer"
 
-import styles from "./App.module.css";
+import styles from "./Home.module.css";
 
 const App: Component = () => {
   let [store, setStore] = createStore({messages: [
@@ -44,8 +44,7 @@ const App: Component = () => {
   })
 
   return (
-    <div class={styles.container}>
-      <Header></Header>
+    <>
       <Show when={loggedIn()} fallback={() => 
         <div class={styles.login}>
           <Button clickSignal={login} content="Login with Ethereum"></Button>
@@ -64,8 +63,7 @@ const App: Component = () => {
           </div>
         }</For>
       </div>
-      <Footer></Footer>
-    </div>
+    </>
   );
 };
 
