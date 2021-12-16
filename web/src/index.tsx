@@ -2,7 +2,7 @@ import { render } from "solid-js/web";
 import { Router, Routes, Route, Link } from "solid-app-router";
 
 import "./index.css";
-import Home from "./Home";
+import Home from "./pages/Home";
 import { Component } from "solid-js";
 import User from "./pages/User"
 import Header from "./components/Header"

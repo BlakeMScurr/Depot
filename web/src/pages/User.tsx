@@ -14,7 +14,7 @@ const User: Component = () => {
     return (
         <>
             <h2 class={hs.logo}><a class={hs.logo} href="">{params.user}</a></h2>
-            <div class={StyleSheet.messages}>
+            <div class={styles.messages}>
                 <For each={store.messages.filter((m: message) => { return m.from === params.user })}>{(m: message) =>
                     <div onclick={() => { window.location.assign("/m/" + m.hash) }} class={styles.content}>
                         <div>

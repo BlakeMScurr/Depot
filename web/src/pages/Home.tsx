@@ -2,13 +2,13 @@ import { Component, createEffect, createSignal } from "solid-js";
 import { For, Show } from "solid-js";
 
 
-import User  from "./components/User"
-import Message  from "./components/Message"
-import Button from "./components/Button"
-import Composer from "./components/Composer"
+import User  from "../components/User"
+import Message  from "../components/Message"
+import Button from "../components/Button"
+import Composer from "../components/Composer"
 
 import styles from "./Home.module.css";
-import { messageStore } from "./store";
+import { messageStore } from "../store";
 
 const App: Component = () => {
   let [loggedIn, login] = createSignal(true)
