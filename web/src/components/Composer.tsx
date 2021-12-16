@@ -1,9 +1,9 @@
-import { Component, createEffect, createSignal } from "solid-js";
+import { Component, createEffect, createSignal, untrack } from "solid-js";
 import { splitByLink } from "../util";
 import Button from "./Button";
 import { default as styles } from "./Composer.module.css";
 
-const User: Component = () => {
+const User: Component = (props) => {
     let [poasted, post] = createSignal(false)
     let [text, setText] = createSignal("")
 
@@ -15,14 +15,13 @@ const User: Component = () => {
         post(false)
         let parent = document.createElement('div');
         input.childNodes.forEach((node) => {
-            parent.appendChild(node.cloneNode(true))
+            parent.appendChild(node.cloneNode())
         })
 
         let parts = splitByLink(parent.innerText)
         parts.forEach((part) => {
             if (part.type !== "text") {
                 parent.innerHTML = parent.innerHTML.replace(part.text, `<span>${part.text}</span>`)
-
             }
         })
 
@@ -31,6 +30,7 @@ const User: Component = () => {
 
     createEffect(() => {
         if (poasted()) {
+            props.setPost(untrack(text))
             setText("")
             input.innerText = ""
             setRenderer(document.createElement('div'))

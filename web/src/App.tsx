@@ -1,5 +1,6 @@
-import { Component, createEffect, createSignal } from "solid-js";
+import { Component, createEffect, createSignal, untrack } from "solid-js";
 import { For, Show } from "solid-js";
+import { createStore } from "solid-js/store";
 
 import User  from "./components/User"
 import Message  from "./components/Message"
@@ -11,25 +12,36 @@ import Composer from "./components/Composer"
 import styles from "./App.module.css";
 
 const App: Component = () => {
-  let messages = [
+  let [store, setStore] = createStore({messages: [
     {
       from: "0x00000",
       message: "great point @guthl.eth!",
-      hash: "1234"
+      hash: "1234",
+      new: false,
     },
     {
       from: "0x11111",
       message: "gm",
-      hash: "5678"
+      hash: "5678",
+      new: false,
     },
     {
       from: "0x2fdsa3",
       message: "what is this app??? what is www.snuggly.com??",
-      hash: "9012"
+      hash: "9012",
+      new: false,
     }
-  ]
+  ]})
 
   let [loggedIn, login] = createSignal(true)
+  let [post, setPost] = createSignal("")
+
+  createEffect(() => {
+    if (post()) { // TODO: make sure we don't send the post signal as the signal is initialised
+      // TODO: animate on create
+      setStore("messages", (messages) => [{from: "you", message: post(), hash: "somehash", new: true}, ...messages])
+    }
+  })
 
   return (
     <div class={styles.container}>
@@ -39,10 +51,10 @@ const App: Component = () => {
           <Button clickSignal={login} content="Login with Ethereum"></Button>
         </div>
       }>
-        <Composer></Composer>
+        <Composer setPost={setPost}></Composer>
       </Show>
       <div class={styles.messages}>
-        <For each={messages}>{(message) =>
+        <For each={store.messages}>{(message) =>
           <div onclick={() => { window.location.assign("/m/" + message.hash) }} class={styles.content}>
             <div>
               <User address={message.from}></User>
