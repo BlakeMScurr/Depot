@@ -13,6 +13,7 @@ const User: Component = () => {
                 </div>
             </div>
             <div class={styles.footer}>
+                <hr />
                 <div class={styles.linkList}>
                     <a class="primary" href="https://github.com/blakemscurr/snuggly">github</a>
                 </div>

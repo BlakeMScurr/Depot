@@ -12,6 +12,6 @@
 }
 
 .content:hover {
-cursor: pointer;
-background-color: var(--hover-color);
+    cursor: pointer;
+    background-color: var(--hover-color);
 }

@@ -1,0 +1,7 @@
+.content {
+    overflow: auto;
+}
+
+.content>div {
+    padding: 15px 30px;
+}

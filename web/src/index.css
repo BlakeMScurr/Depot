@@ -37,6 +37,10 @@ a.primary {
   color: var(--secondary);
 }
 
+p {
+  margin: 0;
+}
+
 a {
   text-decoration: none;
 }
