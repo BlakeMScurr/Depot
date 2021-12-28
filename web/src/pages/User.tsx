@@ -15,10 +15,10 @@ const User: Component = () => {
         <>
             <h2 class={hs.logo}><a class={hs.logo} href="">{params.user}</a></h2>
             <div class={styles.messages}>
-                <For each={store.messages.filter((m: message) => { return m.from === params.user })}>{(m: message) =>
-                    <div onclick={() => { window.location.assign("/m/" + m.hash) }} class={styles.content}>
+                <For each={store.messages.filter((m: message) => { return m.content.from === params.user })}>{(m: message) =>
+                    <div onclick={() => { window.location.assign("/m/" + m.metadata.hash) }} class={styles.content}>
                         <div>
-                            <Message message={m.message}></Message>
+                            <Message message={m.content.message}></Message>
                         </div>
                         <hr/>
                     </div>

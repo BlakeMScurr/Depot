@@ -10,7 +10,7 @@ const User: Component = () => {
     const params = useParams();
     let [store, _] = messageStore()
 
-    let m = store.messages.filter((m: message) => m.hash === params.hash)[0]
+    let m = store.messages.filter((m: message) =>  m.metadata.hash === params.hash)[0]
 
     // from https://stackoverflow.com/a/847196/7371580
     let renderTime = (unixTimestamp: number) => {
@@ -26,18 +26,18 @@ const User: Component = () => {
 
     return (
         <>
-            <h2 class={hs.logo}><a class={hs.logo} href={`/${m.from}`}>{m.from}</a></h2>
+            <h2 class={hs.logo}><a class={hs.logo} href={`/${m.content.from}`}>{m.content.from}</a></h2>
             <div class={styles.messages}>
                 <div class={styles.content}>
                     <div>
-                        <Message message={m.message}></Message>
+                        <Message message={m.content.message}></Message>
                     </div>
                 </div>
                 <hr/>
                 <div class={styles.content}>
                     <div>
                         <p class="secondary">{renderTime(m.metadata.timestamp)}</p>
-                        <p class="secondary"><a class="secondary" href={`/storageProof/${m.hash}`}>Storage Proof</a></p>
+                        <p class="secondary"><a class="secondary" href={`/storageProof/${m.metadata.hash}`}>Storage Proof</a></p>
                     </div>
                 </div>
             </div>
