@@ -38,19 +38,3 @@ export function addHttp(link: string) {
     }
     return link
 }
-
-// verbatim from https://stackoverflow.com/a/3976125/7371580 thanks!
-export function getCaretPosition(editableDiv) {
-    var caretPos = -1,
-      sel, range;
-    if (window.getSelection) {
-      sel = window.getSelection();
-      if (sel.rangeCount) {
-        range = sel.getRangeAt(0);
-        // if (range.commonAncestorContainer.parentNode == editableDiv) {
-          caretPos = range.endOffset;
-        // }
-      }
-    }
-    return caretPos;
-  }

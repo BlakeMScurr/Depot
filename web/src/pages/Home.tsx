@@ -8,7 +8,7 @@ import Button from "../components/Button"
 import Composer from "../components/Composer"
 
 import styles from "./Home.module.css";
-import { message, messageStore } from "../store";
+import { request, messageStore } from "../store";
 
 const App: Component = () => {
   let [loggedIn, login] = createSignal(true)
@@ -18,7 +18,7 @@ const App: Component = () => {
   createEffect(() => {
     if (post()) { // TODO: make sure we don't send the post signal as the signal is initialised
       // TODO: animate on create
-      setStore("messages", (messages: Array<message>) => [{content: {from: "you", message: post(), signature: "somesig"}, metadata: {hash: Math.floor(Math.random() * 1000) + ""}}, ...messages])
+      setStore("messages", (messages: Array<request>) => [{content: {from: "you", message: post(), signature: "somesig"}, metadata: {hash: Math.floor(Math.random() * 1000) + ""}}, ...messages])
     }
   })
 
@@ -32,11 +32,11 @@ const App: Component = () => {
         <Composer setPost={setPost}></Composer>
       </Show>
       <div class={styles.messages}>
-        <For each={store.messages}>{(message: message) =>
+        <For each={store.messages}>{(message: request) =>
           <div onclick={() => { window.location.assign("/m/" + message.metadata.hash) }} class={styles.content}>
             <div>
-              <User address={message.content.from}></User>
-              <Message message={message.content.message}></Message>
+              <User address={message.rq.from}></User>
+              <Message message={message.rq.message}></Message>
             </div>
             <hr/>
           </div>
