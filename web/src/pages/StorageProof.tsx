@@ -3,6 +3,7 @@ import { Component, onMount } from "solid-js";
 import hljs from "highlight.js";
 
 import { request, messageStore } from "../store";
+import { feltToString } from "../util";
 
 const StorageProof: Component = () => {
     const params = useParams();
@@ -20,10 +21,13 @@ const StorageProof: Component = () => {
 
 from starkware.crypto.signature.signature import pedersen_hash
 
+
+# The entire message is represented in the following json: ${JSON.stringify(m.content)}
+# The message string is defined as a list of cairo field elements above. The message is:
+# ${feltToString(m.content.message)}
+let messageHash = pedersen_hash(${m.content.type}, ${m.content.blocknumber}, ${m.content.app}, ${m.content.from}, ${m.content.signature}, ${m.content.message.length}, ${m.content.message})
+
 let stateRoot = ${m.metadata.root}
-let message = ${JSON.stringify(m.content)}
-let felt_endocded_message = 
-let messageHash = pedersen_hash(${m.content.type}, ${m.content.blocknumber}, ${m.content.app}, ${m.content.from}, ${m.content.signature}, ${m.content.message.length},  )
 print(messageHash)
 
 print(pedersen_hash(1,2))

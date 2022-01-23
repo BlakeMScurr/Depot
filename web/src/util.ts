@@ -41,6 +41,8 @@ export function addHttp(link: string) {
     return link
 }
 
+// Underlying messages are represented as felts (field elements) as defined in cairo (https://www.cairo-lang.org/docs/hello_cairo/intro.html?highlight=felt#field-element)
+// A felt is a 252 bit integer, which fits 31 bytes
 export function feltToString(message: Array<ethers.BigNumber>):string {
     let result = ""
     for (let i = 0; i < message.length; i++) {
