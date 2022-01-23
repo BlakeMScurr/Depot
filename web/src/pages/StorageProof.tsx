@@ -2,13 +2,13 @@ import { useParams } from "solid-app-router";
 import { Component, onMount } from "solid-js";
 import hljs from "highlight.js";
 
-import { message, messageStore } from "../store";
+import { request, messageStore } from "../store";
 
 const StorageProof: Component = () => {
     const params = useParams();
     let [store, _] = messageStore()
 
-    let m = store.messages.filter((m: message) => m.metadata.hash === params.hash)[0]
+    let m = store.messages.filter((m: request) => m.metadata.hash === params.hash)[0]
     onMount(() => {
         hljs.highlightAll()
     })
@@ -23,7 +23,7 @@ from starkware.crypto.signature.signature import pedersen_hash
 let stateRoot = ${m.metadata.root}
 let message = ${JSON.stringify(m.content)}
 let felt_endocded_message = 
-let messageHash = pedersen_hash(1, 2, 3, 4, 5)
+let messageHash = pedersen_hash(${m.content.type}, ${m.content.blocknumber}, ${m.content.app}, ${m.content.from}, ${m.content.signature}, ${m.content.message.length},  )
 print(messageHash)
 
 print(pedersen_hash(1,2))

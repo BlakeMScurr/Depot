@@ -3,7 +3,7 @@ import { Component, For } from "solid-js";
 
 import hs from "../components/Header.module.css"
 import Message from "../components/Message";
-import { message, messageStore } from "../store";
+import { request, messageStore } from "../store";
 import styles from "./User.module.css"
 
 const User: Component = () => {
@@ -15,10 +15,10 @@ const User: Component = () => {
         <>
             <h2 class={hs.logo}><a class={hs.logo} href="">{params.user}</a></h2>
             <div class={styles.messages}>
-                <For each={store.messages.filter((m: message) => { return m.content.from === params.user })}>{(m: message) =>
+                <For each={store.messages.filter((m: request) => { return m.rq.from === params.user })}>{(m: request) =>
                     <div onclick={() => { window.location.assign("/m/" + m.metadata.hash) }} class={styles.content}>
                         <div>
-                            <Message message={m.content.message}></Message>
+                            <Message message={m.rq.message}></Message>
                         </div>
                         <hr/>
                     </div>

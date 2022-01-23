@@ -3,14 +3,14 @@ import { Component, For } from "solid-js";
 
 import hs from "../components/Header.module.css"
 import Message from "../components/Message";
-import { message, messageStore } from "../store";
+import { request, messageStore } from "../store";
 import styles from "./Message.module.css"
 
 const User: Component = () => {
     const params = useParams();
     let [store, _] = messageStore()
 
-    let m = store.messages.filter((m: message) =>  m.metadata.hash === params.hash)[0]
+    let m = store.messages.filter((m: request) =>  m.metadata.hash === params.hash)[0]
 
     // from https://stackoverflow.com/a/847196/7371580
     let renderTime = (unixTimestamp: number) => {
