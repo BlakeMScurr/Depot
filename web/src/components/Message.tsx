@@ -1,8 +1,8 @@
 import { Component, For, Switch, Match } from "solid-js";
-import { splitByLink, addHttp } from "../util";
+import { splitByLink, addHttp, feltToString } from "../util";
 
 const Message: Component = (props) => {
-    let parts = splitByLink(props.message)
+    let parts = splitByLink(feltToString(props.message))
 
     return (
         <For each={parts}>{(part) =>

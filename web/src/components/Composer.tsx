@@ -4,7 +4,7 @@ import Button from "./Button";
 import { default as styles } from "./Composer.module.css";
 
 const User: Component = (props) => {
-    let [poasted, post] = createSignal(false)
+    let [posted, post] = createSignal(false)
     let [text, setText] = createSignal("")
 
     let input;
@@ -29,7 +29,7 @@ const User: Component = (props) => {
     }
 
     createEffect(() => {
-        if (poasted()) {
+        if (posted()) {
             props.setPost(untrack(text))
             setText("")
             input.innerText = ""
@@ -44,7 +44,7 @@ const User: Component = (props) => {
                 {renderer}
             </div>
             <div class={styles.button}>
-                <Button active={() => {return text() !== ""}} clickSignal={post} content="poast"></Button>
+                <Button active={() => {return text() !== ""}} clickSignal={post} content="post"></Button>
             </div>
         </div>
     );
