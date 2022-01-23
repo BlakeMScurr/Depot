@@ -39,5 +39,3 @@ print(pedersen_hash(3,4))
 };
 
 export default StorageProof;
-
-

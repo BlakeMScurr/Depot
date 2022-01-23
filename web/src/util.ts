@@ -1,3 +1,5 @@
+import * as ethers from "ethers"
+
 // Credit to https://stackoverflow.com/a/6041965/7371580
 let linkMatcher = /((http|ftp|https):\/\/)?([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:\/~+#-]*[\w@^=%&\/~+#-])/
 let userMatcher = /@[a-zA-Z0-9\.]+/
@@ -39,18 +41,19 @@ export function addHttp(link: string) {
     return link
 }
 
-// verbatim from https://stackoverflow.com/a/3976125/7371580 thanks!
-export function getCaretPosition(editableDiv) {
-    var caretPos = -1,
-      sel, range;
-    if (window.getSelection) {
-      sel = window.getSelection();
-      if (sel.rangeCount) {
-        range = sel.getRangeAt(0);
-        // if (range.commonAncestorContainer.parentNode == editableDiv) {
-          caretPos = range.endOffset;
-        // }
-      }
+export function feltToString(message: Array<ethers.BigNumber>):string {
+    let result = ""
+    for (let i = 0; i < message.length; i++) {
+        result += ethers.utils.toUtf8String(ethers.utils.arrayify(message[i]))
     }
-    return caretPos;
+    return result
+}
+
+export function stringToFelt(rendered: string):Array<ethers.BigNumber> {
+  let bytes = ethers.utils.toUtf8Bytes(rendered)
+  let felts = []
+  for (let i = 0; i < bytes.length; i += 31) {
+    felts.push(ethers.BigNumber.from(bytes.slice(i, i + 31)))
   }
+  return felts
+}

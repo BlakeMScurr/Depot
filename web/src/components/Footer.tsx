@@ -9,7 +9,7 @@ const User: Component = () => {
         <>
             <div>
                 <div class={styles.linkList}>
-                    <a href="" class={styles.secret}>github</a>
+                    <a href="" class={styles.secret}>_</a>
                 </div>
             </div>
             <div class={styles.footer}>
