@@ -43,9 +43,10 @@ export function addHttp(link: string) {
 
 // Underlying messages are represented as felts (field elements) as defined in cairo (https://www.cairo-lang.org/docs/hello_cairo/intro.html?highlight=felt#field-element)
 // A felt is a 252 bit integer, which fits 31 bytes
+// The first felt is "length" which describes how many felts are required to encode the message. This enables arbitrary length messages.
 export function feltToString(message: Array<ethers.BigNumber>):string {
     let result = ""
-    for (let i = 0; i < message.length; i++) {
+    for (let i = 1; i < message.length; i++) {
         result += ethers.utils.toUtf8String(ethers.utils.arrayify(message[i]))
     }
     return result
@@ -57,5 +58,6 @@ export function stringToFelt(rendered: string):Array<ethers.BigNumber> {
   for (let i = 0; i < bytes.length; i += 31) {
     felts.push(ethers.BigNumber.from(bytes.slice(i, i + 31)))
   }
+  felts.unshift(ethers.BigNumber.from(felts.length))
   return felts
 }
