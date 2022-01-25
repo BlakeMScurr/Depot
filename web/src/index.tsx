@@ -8,7 +8,6 @@ import styles from "./Index.module.css"
 import Home from "./pages/Home";
 import User from "./pages/User"
 import Message from "./pages/Message"
-import StorageProof from "./pages/StorageProof"
 
 import Header from "./components/Header"
 import Footer from "./components/Footer"
@@ -24,7 +23,6 @@ const App: Component = () => {
                     }></Route>
                     <Route path="/:user" element={<User></User>}></Route>
                     <Route path="/m/:hash" element={<Message></Message>}></Route>
-                    <Route path="/storageProof/:hash" element={<StorageProof></StorageProof>}></Route>
                 </Routes>
             <Footer></Footer>
         </div>

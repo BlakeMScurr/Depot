@@ -1,8 +1,9 @@
 import { useParams } from "solid-app-router";
-import { Component, For } from "solid-js";
+import { Component, createSignal, Show } from "solid-js";
 
 import hs from "../components/Header.module.css"
 import Message from "../components/Message";
+import StorageProof from "../components/StorageProof";
 import { request, messageStore } from "../store";
 import styles from "./Message.module.css"
 
@@ -24,6 +25,8 @@ const User: Component = () => {
         return  hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2) + " " + months[date.getMonth()] + " " + date.getDate() + " " + date.getFullYear()
     }
 
+    let [storageProof, setStorageProof] = createSignal(false);
+
     return (
         <>
             <h2 class={hs.logo}><a class={hs.logo} href={`/${m.content.from}`}>{m.content.from}</a></h2>
@@ -37,7 +40,11 @@ const User: Component = () => {
                 <div class={styles.content}>
                     <div>
                         <p class="secondary">{renderTime(m.metadata.timestamp)}</p>
-                        <p class="secondary"><a class="secondary" href={`/storageProof/${m.metadata.hash}`}>Storage Proof</a></p>
+                        <p class="secondary"><a class="secondary" onclick={() => { setStorageProof(!storageProof())}}>{storageProof() ? "Hide" : "Show"} storage proof</a></p>
+                        <Show when={storageProof()}>
+                            <br/>
+                            <StorageProof hash={m.metadata.hash}></StorageProof>
+                        </Show>
                     </div>
                 </div>
             </div>
