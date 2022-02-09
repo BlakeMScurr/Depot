@@ -1,4 +1,4 @@
-import { Component, createEffect, createSignal } from "solid-js";
+import { Component, createEffect, createResource, createSignal } from "solid-js";
 import { For, Show } from "solid-js";
 
 
@@ -8,18 +8,17 @@ import Button from "../components/Button"
 import Composer from "../components/Composer"
 
 import styles from "./Home.module.css";
-import { request, messageStore } from "../store";
-import { stringToFelt } from "../util";
+import { request, setMessage, fetchMessages } from "../store";
 
 const App: Component = () => {
   let [loggedIn, login] = createSignal(true)
   let [post, setPost] = createSignal("")
-  let [store, setStore ] = messageStore()
+  let [store] = createResource(fetchMessages, {initialValue: []})
 
   createEffect(() => {
     if (post()) { // TODO: make sure we don't send the post signal as the signal is initialised
       // TODO: animate on create
-      setStore("messages", (messages: Array<request>) => [{content: {from: "you", message: stringToFelt(post()), signature: "somesig"}, metadata: {hash: Math.floor(Math.random() * 1000) + ""}}, ...messages])
+      setMessage({rq: { "type": "0", "blocknumber": "1", "app": "0", "sender": "0xYOU", "message": post(), "signature": "123", }, "metadata": { "hash": store().length + "", "block": 0, "root": 0, "branches": [{"left": true, "value": 0}, {"left": false, "value": 1}]}},)
     }
   })
 
@@ -33,11 +32,11 @@ const App: Component = () => {
         <Composer setPost={setPost}></Composer>
       </Show>
       <div class={styles.messages}>
-        <For each={store.messages}>{(message: request) =>
+        <For each={store()}>{(message: request) =>
           <div onclick={() => { window.location.assign("/m/" + message.metadata.hash) }} class={styles.content}>
             <div>
-              <User address={message.content.from}></User>
-              <Message message={message.content.message}></Message>
+              <User address={message.rq.sender}></User>
+              <Message message={message.rq.message}></Message>
             </div>
             <hr/>
           </div>

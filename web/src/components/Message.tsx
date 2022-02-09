@@ -1,8 +1,10 @@
+import { ethers } from "ethers";
 import { Component, For, Switch, Match } from "solid-js";
 import { splitByLink, addHttp, feltToString } from "../util";
 
 const Message: Component = (props) => {
-    let parts = splitByLink(feltToString(props.message))
+    let message = feltToString(props.message.map((str: string) => ethers.BigNumber.from(str)))
+    let parts = splitByLink(message)
 
     return (
         <For each={parts}>{(part) =>

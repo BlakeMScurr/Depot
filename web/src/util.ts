@@ -61,3 +61,7 @@ export function stringToFelt(rendered: string):Array<ethers.BigNumber> {
   felts.unshift(ethers.BigNumber.from(felts.length))
   return felts
 }
+
+export function hex(n: number) {
+    return ethers.BigNumber.from(n).toHexString()
+}

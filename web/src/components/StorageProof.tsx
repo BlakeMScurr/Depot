@@ -1,18 +1,13 @@
 import { useParams } from "solid-app-router";
-import { Component, onMount } from "solid-js";
+import { Component, createResource, onMount } from "solid-js";
 import hljs from "highlight.js";
-
-import { request, messageStore } from "../store";
-import { feltToString } from "../util";
 
 import styles from "./StorageProof.module.css";
 import { ethers } from "ethers";
 
 const StorageProof: Component = (props) => {
-    console.log("helo?")
-    let [store, _] = messageStore()
-    console.log("yo", props)
-    let m = store.messages.filter((m: request) => m.metadata.hash === props.hash)[0]
+    let m = props.message
+
     onMount(() => {
         hljs.highlightAll()
     })
@@ -29,13 +24,12 @@ const StorageProof: Component = (props) => {
     });
     
 
-
     let code = `
 from starkware.crypto.signature.signature import pedersen_hash
 
 # The message has the following fields encoded as cairo finite field elements:
-# type, blocknumber, app, from, signature, content length, content (as a list)
-let messageHash = pedersen_hash(${m.content.type}, ${m.content.blocknumber}, ${m.content.app}, ${ethers.BigNumber.from(m.content.from).toBigInt()}, ${m.content.signature}, ${m.content.message.length}, ${m.content.message})
+# type, blocknumber, app, sender, signature, content length, content (as a list)
+let messageHash = pedersen_hash(${m.rq.type}, ${m.rq.blocknumber}, ${m.rq.app}, ${ethers.BigNumber.from(m.rq.sender).toBigInt()}, ${m.rq.signature}, ${m.rq.message.length}, ${m.rq.message})
 
 let state_root = ${m.metadata.root}
 

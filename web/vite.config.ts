@@ -7,4 +7,14 @@ export default defineConfig({
     target: "esnext",
     polyfillDynamicImport: false,
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false,      
+        ws: true,
+      }
+    }
+  }
 });
