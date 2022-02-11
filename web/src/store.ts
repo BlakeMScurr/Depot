@@ -1,8 +1,6 @@
-import { stringToFelt } from "./util"
-
 export type request = {
     rq: { type: number, blocknumber: number,  sender: string, signature: string, message: string }, 
-    metadata: { hash: string, block: number, root: number, branches: Array<{left: boolean, value: number}> }
+    metadata: { hash: string, root: number, branches: Array<{left: boolean, value: number}> }
 }
 
 export async function fetchMessages() {
@@ -17,7 +15,6 @@ export async function fetchMessages() {
 
 export function getUser(user: string) {
     return async () => {
-        console.log("fetching", user)
         let url = `/api/user?user=${user}`
         let response = await fetch(url)
         let data = await response.text()

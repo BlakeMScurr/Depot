@@ -29,14 +29,6 @@ end
 
 func hash_request_tree{range_check_ptr, pedersen_ptr : HashBuiltin*}(depth: felt, blockNumber: felt, request_len: felt, request: Request*) -> (root_hash: felt):
     alloc_locals
-    # assert that the 0 and MAX requests bookend the list
-    let (zeror) = zero_request()
-    let (zeq) = request_equal(zeror, request) 
-    assert zeq = 1
-
-    let (mr) = max_request()
-    let (meq) = request_equal(mr, request + (request_len * Request.SIZE))
-    assert meq = 1
     
     # assert that all requests are in order
     all_valid(request_len, request)
@@ -47,6 +39,7 @@ func hash_request_tree{range_check_ptr, pedersen_ptr : HashBuiltin*}(depth: felt
     let (hashes : felt*) = alloc()
     hash_requests(request_len, request, hashes)
 
+    let (mr) = max_request()
     let (mrh) = hash_request{pedersen_ptr=pedersen_ptr}(mr)
     let (res) = merkle_tree(depth, mrh, request_len, hashes)
     return (res)

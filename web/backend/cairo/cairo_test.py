@@ -1,6 +1,6 @@
 import os
 import pytest
-from pre_proof import merkle_tree, merkle_layer, chain_hash
+from pre_proof import merkle_tree, make_merkle_tree, merkle_layer, chain_hash
 
 from starkware.crypto.signature.signature import pedersen_hash
 from starkware.starknet.testing.starknet import Starknet
@@ -38,7 +38,7 @@ async def test_merkle_layer():
     assert (await contract.merkle_layer_t([1,2,3,4,5,6,7,8,9], 0).invoke()).result == (5,)
     assert (await contract.val_in_next_layer([1,2,3,4,5,6,7,8,9], 3).invoke()).result == (pedersen_hash(7,8),)
     assert (await contract.val_in_next_layer([1,2,3,4,5,6,7,8,9], 4).invoke()).result == (9,)
-    assert merkle_layer([1,2,3,4,5,6,7,8,9]) == [pedersen_hash(1,2), pedersen_hash(3,4), pedersen_hash(5,6), pedersen_hash(7,8), 9]
+    assert merkle_layer([1,2,3,4,5,6,7,8]) == [pedersen_hash(1,2), pedersen_hash(3,4), pedersen_hash(5,6), pedersen_hash(7,8)]
 
 @pytest.mark.asyncio
 async def test_merkle_tree():
@@ -50,14 +50,15 @@ async def test_merkle_tree():
     # TODO: handle the trivial case of an empty tree
     assert (await contract.merkle_tree_t(0, [1]).invoke()).result == (1,)
     assert (await contract.merkle_tree_t(1, [1,2]).invoke()).result == (pedersen_hash(1,2),)
-    assert merkle_tree([1,2]) == pedersen_hash(1,2)
+    print(make_merkle_tree([1,2]))
+    assert make_merkle_tree([1,2])[0][0] == pedersen_hash(1,2)
 
     merkleTree1to4 = (await contract.merkle_tree_t(2, [1,2,3,4]).invoke()).result.root_hash
     assert merkleTree1to4  == pedersen_hash(
         pedersen_hash(1,2),
         pedersen_hash(3,4)
     )
-    assert merkleTree1to4 == merkle_tree([1,2,3,4])
+    assert merkleTree1to4 == make_merkle_tree([1,2,3,4])[0][0]
 
     merkleTree1to5 = (await contract.merkle_tree_t(3, [1,2,3,4,5]).invoke()).result.root_hash
     mv = 2 ** 250
@@ -73,7 +74,7 @@ async def test_merkle_tree():
         )
     )
 
-    assert merkleTree1to5 == merkle_tree([1,2,3,4,5, max_hash, max_hash, max_hash])
+    assert merkleTree1to5 == make_merkle_tree([1,2,3,4,5, max_hash, max_hash, max_hash])[0][0]
 
     with pytest.raises(Exception) as e_info:
         await contract.merkle_tree_t(1, [1,2,3,4]).invoke()
@@ -86,6 +87,38 @@ async def test_merkle_tree():
     with pytest.raises(Exception) as e_info:
         await contract.merkle_tree_t(5, [1,2,3,4,5]).invoke()
     assert e_info.value.message.find("assert_nn_le(full_length, elems_len*2)") != -1
+
+    assert make_merkle_tree([1,2,3,4]) == [[3000975577331064457418989440417805546270001226817465829206893032529539211230], [2592987851775965742543459319508348457290966253241455514226127639100457844774, 1078504723311822443900992338775481548059850561756203702548080974952533155775]]
+
+@pytest.mark.asyncio
+async def test_merkle_proofs():
+    t = merkle_tree([1,2,3,4,5,6,7,8])
+    assert t.is_member(1) == True
+    assert t.is_member(9) == False
+
+    assert t.layers == [[1130932076458321799193601272100481259942281698893666036448733638625239224522], 
+        [3000975577331064457418989440417805546270001226817465829206893032529539211230, 2557636746132495840978977608457255533565501289266531688603149201889498212683], 
+        [2592987851775965742543459319508348457290966253241455514226127639100457844774, 1078504723311822443900992338775481548059850561756203702548080974952533155775, 887847247223813684398612989470912626224213579404697697378648600264021898263, 1639567931862120316944501436886260401899290029152657621735471556017756287204],
+        [1,2,3,4,5,6,7,8]
+    ]
+
+    # assert t.proof(1) == [
+    #     {"left": True, "value": 2557636746132495840978977608457255533565501289266531688603149201889498212683},
+    #     {"left": True, "value": 1078504723311822443900992338775481548059850561756203702548080974952533155775},
+    #     {"left": True, "value": 2}
+    # ]
+
+    assert t.proof(8) == [
+        {"left": False, "value": 3000975577331064457418989440417805546270001226817465829206893032529539211230},
+        {"left": False, "value": 887847247223813684398612989470912626224213579404697697378648600264021898263},
+        {"left": False, "value": 7},
+    ]
+
+    assert t.proof(5) == [
+        {"left": False, "value": 3000975577331064457418989440417805546270001226817465829206893032529539211230},
+        {"left": True, "value": 1639567931862120316944501436886260401899290029152657621735471556017756287204},
+        {"left": True, "value": 6},
+    ]
 
 @pytest.mark.asyncio
 async def test_hash_single_request():
@@ -161,7 +194,7 @@ async def test_hash_request_tree():
         3, 5, *requestData()
     ).invoke()).result.root_hash
 
-    assert root_hash == merkle_tree([
+    assert root_hash == make_merkle_tree([
         chain_hash([0,      0,  0,      0,  0,  0,  0,  0,  0,  0]),
     
         chain_hash([0,      0,  1,      1,  0,  0,  0,  0,  0,  0]),
