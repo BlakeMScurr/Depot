@@ -17,6 +17,9 @@ class merkle_tree:
     def is_member(self, hash):
         return hash in self.members
 
+    def index(self, hash):
+        return self.members[hash]
+
     def proof(self, hash):
         if not self.is_member(hash):
             raise ValueError('Cannot construct merkle proof for non member')
