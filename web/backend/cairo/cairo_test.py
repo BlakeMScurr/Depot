@@ -11,6 +11,29 @@ CONTRACT_FILE = os.path.join(
 
 
 @pytest.mark.asyncio
+async def test_wip():
+    # utility function to hash the method
+    def chain_hash(vals):
+        hash = pedersen_hash(vals[0], vals[1])
+        for val in vals[2:]:
+            hash = pedersen_hash(hash, val)
+        return hash
+
+    # The message has the following fields encoded as cairo finite field elements:
+    # type, blocknumber, app, sender, signature, content length, content (as a list)
+    next_hash = chain_hash([0, 1, 197650603477957088498783962921252079099017253465, 123, 2, 1,152632524867406571304184616186155773426136391771967])
+
+    state_root = 854279078003960069021611104544629289150884513562886273167471178669901840347
+
+    next_hash = pedersen_hash(next_hash, 1705677425751388620230355772072331155129020167297877825328333953556124544219)
+    next_hash = pedersen_hash(next_hash, 60607370502196195950314387384491072856263062193302251469032625820365648458)
+    next_hash = pedersen_hash(next_hash, 1371707977826436411491177397482053597402777437564933703639708801461146765312)
+
+
+    assert next_hash == state_root
+
+
+@pytest.mark.asyncio
 async def test_merkle_layer():
     starknet = await Starknet.empty()
     contract = await starknet.deploy(

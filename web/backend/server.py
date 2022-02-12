@@ -5,41 +5,52 @@ import store
 class MessagesResource:
     def on_get(self, req, resp):
         ms = []
-        for m in store.messages:
-            ms.append({"rq": jsFormat(m["rq"]), "metadata": m["metadata"]})
+        for m in store.messages.all_messages():
+            ms.append(jsFormat(m))
         resp.text = json.dumps(ms)
 
 class UserResource:
     def on_get(self, req, resp):
         user = int(req.params["user"], 16)
-        usersMessages = []
-        for m in store.messages:
+        ms = store.messages.by_user(user)
+        formatted = []
+        for m in ms:
             if m["rq"]["sender"] == user:
-                usersMessages.append({"rq": jsFormat(m["rq"]), "metadata": m["metadata"]})
-        resp.text = json.dumps(usersMessages)
+                formatted.append(jsFormat(m))
+        resp.text = json.dumps(formatted)
 
 class MessageResource:
     def on_get(self, req, resp):
-        hash = req.params["hash"]
-        for m in store.messages:
-            if m["metadata"]["hash"] == hash:
-                resp.text = json.dumps({"rq": jsFormat(m["rq"]), "metadata": m["metadata"]})
+        hash = int(req.params["hash"], 16)
+        m = store.messages.get_message(hash)
+        resp.text = json.dumps(jsFormat(m))
 
     def on_post(self, req, resp):
         raw_data = json.load(req.bounded_stream)
         store.messages.append(raw_data)
 
 # numbers in js are limited to ~53 bytes, so we have to send the numbers in our requests as hex strings
-def jsFormat(rq):
+def jsFormat(m):
     message = []
-    for part in rq["message"]:
+    for part in m["rq"]["message"]:
         message.append(str(part))
+
+    branches = []
+    for branch in m["metadata"]["branches"]:
+        branches.append({ "left": branch["left"], "value": str(branch["value"])})
     return {
-        "type": str(rq["type"]),
-        "blocknumber": str(rq["blocknumber"]),
-        "sender": str(rq["sender"]),
-        "message": message,
-        "signature": str(rq["signature"]),
+        "rq": {
+            "type": str(m["rq"]["type"]),
+            "blocknumber": str(m["rq"]["blocknumber"]),
+            "sender": str(m["rq"]["sender"]),
+            "message": message,
+            "signature": str(m["rq"]["signature"]),
+        },
+        "metadata": {
+            "hash": str(m["metadata"]["hash"]),
+            "root": str(m["metadata"]["root"]),
+            "branches": branches,
+        }
     }
 
 api = falcon.App()

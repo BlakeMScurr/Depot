@@ -4,6 +4,7 @@ import { Component, createResource, For } from "solid-js";
 import hs from "../components/Header.module.css"
 import Message from "../components/Message";
 import { request, getUser } from "../store";
+import { hex } from "../util";
 import styles from "./User.module.css"
 
 const User: Component = () => {
@@ -17,7 +18,7 @@ const User: Component = () => {
             <h2 class={hs.logo}><a class={hs.logo} href="">{params.user}</a></h2>
             <div class={styles.messages}>
                 <For each={messages()}>{(m: request) =>
-                    <div onclick={() => { window.location.assign("/m/" + m.metadata.hash) }} class={styles.content}>
+                    <div onclick={() => { window.location.assign("/m/" + hex(m.metadata.hash)) }} class={styles.content}>
                         <div>
                             <Message message={m.rq.message}></Message>
                         </div>

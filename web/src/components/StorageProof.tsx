@@ -16,9 +16,9 @@ const StorageProof: Component = (props) => {
     let merkle_proof = ""
     m.metadata.branches.forEach(branch => {
         if (branch.left) {
-            merkle_proof += `next_level = pedersen_hash(message_hash, ${branch.value})`
+            merkle_proof += `next_hash = pedersen_hash(next_hash, ${branch.value})`
         } else {
-            merkle_proof += `next_level = pedersen_hash(message_hash, ${branch.value})`
+            merkle_proof += `next_hash = pedersen_hash(next_hash, ${branch.value})`
         }
         merkle_proof += "\n"
     });
@@ -27,15 +27,22 @@ const StorageProof: Component = (props) => {
     let code = `
 from starkware.crypto.signature.signature import pedersen_hash
 
+# utility function to hash the method
+def chain_hash(vals):
+    hash = pedersen_hash(vals[0], vals[1])
+    for val in vals[2:]:
+        hash = pedersen_hash(hash, val)
+    return hash
+
 # The message has the following fields encoded as cairo finite field elements:
 # type, blocknumber, app, sender, signature, content length, content (as a list)
-let messageHash = pedersen_hash(${m.rq.type}, ${m.rq.blocknumber}, ${m.rq.app}, ${ethers.BigNumber.from(m.rq.sender).toBigInt()}, ${m.rq.signature}, ${m.rq.message.length}, ${m.rq.message})
+next_hash = chain_hash([${m.rq.type}, ${m.rq.blocknumber}, ${ethers.BigNumber.from(m.rq.sender).toBigInt()}, ${m.rq.signature}, ${m.rq.message.length}, ${m.rq.message}])
 
-let state_root = ${m.metadata.root}
+state_root = ${m.metadata.root}
 
 ${merkle_proof}
 
-assert next_level == state_root
+assert next_hash == state_root
 `
 
     return (

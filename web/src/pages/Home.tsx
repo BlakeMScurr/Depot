@@ -9,6 +9,7 @@ import Composer from "../components/Composer"
 
 import styles from "./Home.module.css";
 import { request, setMessage, fetchMessages } from "../store";
+import { hex } from "../util";
 
 const App: Component = () => {
   let [loggedIn, login] = createSignal(true)
@@ -33,7 +34,7 @@ const App: Component = () => {
       </Show>
       <div class={styles.messages}>
         <For each={store()}>{(message: request) =>
-          <div onclick={() => { window.location.assign("/m/" + message.metadata.hash) }} class={styles.content}>
+          <div onclick={() => { window.location.assign("/m/" + hex(message.metadata.hash)) }} class={styles.content}>
             <div>
               <User address={message.rq.sender}></User>
               <Message message={message.rq.message}></Message>
