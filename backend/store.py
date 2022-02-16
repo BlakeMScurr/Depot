@@ -6,8 +6,8 @@ raw_messages = [
     { "type": 0, "blocknumber": 1, "sender": 0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B, "message": [1, 2595724071118733894028796284220695477835951201], "signature": 124 },
     { "type": 0, "blocknumber": 1, "sender": 0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B, "message": [1, 630521840231950245079044493625488752], "signature": 125 },
     { "type": 0, "blocknumber": 1, "sender": 0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B, "message": [1, 161362985116191542540540984826690434405], "signature": 126 },
-    { "type": 0, "blocknumber": 1, "sender": 0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B, "message": [1, 9908240676135212083450090473416363315419018108784109601], "signature": 127 },
-    { "type": 0, "blocknumber": 1, "sender": 0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B, "message": [1, 9908240676135212083450090473416363315419018108784109601], "signature": 128 },
+    { "type": 0, "blocknumber": 1, "sender": 0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B, "message": [1, 0x7768617420697320746869732c2040626c616b656d73637572723f], "signature": 127 },
+    { "type": 0, "blocknumber": 1, "sender": 0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B, "message": [1, 0x7768617420697320746869732c2040626c616b656d73637572723f], "signature": 128 },
     { "type": 0, "blocknumber": 1, "sender": 0xE5501BC2B0Df6D0D7daAFC18D2ef127D9e612963, "message": [1, 26477], "signature": 129 },
     { "type": 0, "blocknumber": 1, "sender": 0xb8c2C29ee19D8307cb7255e1Cd9CbDE883A267d5, "message": [2, 210975209673079988634703143370631324886738580130199451368637689292119308151, 942136265740830059898802705088319], "signature": 130},
 ]
