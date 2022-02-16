@@ -1,14 +1,5 @@
 node_modules
 .env
-docs
-
-# Build
-server/**/*.js
-
-#Hardhat files
-cache
-artifacts
-typechain
 
 # Cairo build artifacts
 cairo/*.json
