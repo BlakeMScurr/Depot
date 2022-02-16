@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "serve": "vite preview",
-    "test": "jest --verbose false"
+    "test": "jest --verbose false",
+    "preview": "vite preview --port 80",
   },
   "license": "MIT",
   "devDependencies": {
