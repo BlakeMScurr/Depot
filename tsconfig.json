@@ -1,17 +1,13 @@
 {
-  "compilerOptions":{
-    "resolveJsonModule":true,
-    "target":"es2018",
-    "module":"commonjs",
-    "strict":true,
-    "esModuleInterop":true,
-    "outDir":"dist"
-  },
-  "include":[
-    "./scripts",
-    "./test"
-  ],
-  "files":[
-    "./hardhat.config.ts"
-  ]
+  "compilerOptions": {
+    "strict": true,
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
+    "types": ["vite/client", "jest"]
+  }
 }

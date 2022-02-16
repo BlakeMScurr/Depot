@@ -1,8 +1,2 @@
 node_modules
-.env
-
-# Cairo build artifacts
-cairo/*.json
-cairo/*.zip
-**/*.pyc
-cairo/__pycache__/
+dist
