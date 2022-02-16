@@ -1,2 +1,5 @@
 node_modules
 dist
+
+backend/__pycache__
+backend/cairo/__pycache__
